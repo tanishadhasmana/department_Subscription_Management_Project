@@ -1,9 +1,39 @@
-import { Router } from "express";
-import { getAllSubscriptions } from "../controllers/subscriptionController";
+import express from "express";
+import {
+  getAllSubscriptions,
+  getSubscriptionById,
+  createSubscription,
+  updateSubscription,
+  updateSubscriptionStatus,
+  deleteSubscription,
+  getSubscriptionsCount,
+  exportAllSubscriptions,
+} from "../controllers/subscriptionController";
+// ensure user logged in
+import { protect, requirePermission } from "../middleware/authMiddleware";
 
-const router = Router();
+// express app to create routes
+const router = express.Router();
 
-// GET /subscriptions
-router.get("/", getAllSubscriptions);
+// ----------------------------
+// 📊 Subscription Management Routes
+// ----------------------------
+router.get("/", protect, requirePermission("subscription_list"), getAllSubscriptions);
+router.get("/count", protect, requirePermission("subscription_list"), getSubscriptionsCount);
+router.get(
+  "/export",
+  protect,
+  requirePermission("subscription_list"),
+  exportAllSubscriptions
+);
+router.get("/:id", protect, requirePermission("subscription_list"), getSubscriptionById);
+
+router.post("/", protect, requirePermission("subscription_add"), createSubscription);
+
+router.put("/:id", protect, requirePermission("subscription_edit"), updateSubscription);
+
+router.put("/:id/status", protect, requirePermission("subscription_edit"), updateSubscriptionStatus);
+
+router.delete("/:id", protect, requirePermission("subscription_delete"), deleteSubscription);
 
 export default router;

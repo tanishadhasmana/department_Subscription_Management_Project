@@ -68,12 +68,12 @@ const checkSession = useCallback(async () => {
     if (backendUser) {
       const mappedUser: User = {
         id: backendUser.id,
-        firstName: backendUser.first_name,
-        lastName: backendUser.last_name,
+        first_name: backendUser.first_name,
+        last_name: backendUser.last_name,
         email: backendUser.email,
-        phone: backendUser.phone_no,
+        phone_no: backendUser.phone_no,
         role_id: backendUser.role_id,
-        departmentName: backendUser.department_name,
+        department_name: backendUser.department_name,
         status: backendUser.status,
         permissions: backendUser.permissions || [],
       };

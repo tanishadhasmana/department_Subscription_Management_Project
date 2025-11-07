@@ -1,0 +1,111 @@
+import { Knex } from "knex";
+
+export async function seed(knex: Knex): Promise<void> {
+  // Deletes ALL existing entries
+  await knex("subscriptions").del();
+
+  // Inserts 10 entries
+  await knex("subscriptions").insert([
+    {
+      subsc_name: "Fullstack Basic",
+      subsc_price: 99,
+      subsc_type: "Monthly",
+      subsc_currency: "USD",
+      renew_date: "2025-12-05",
+      portal_detail: "Fullstack Portal",
+      subsc_status: "Active",
+      department_id: 1,
+    },
+    {
+      subsc_name: ".NET Pro",
+      subsc_price: 149,
+      subsc_type: "Monthly",
+      subsc_currency: "USD",
+      renew_date: "2025-12-05",
+      portal_detail: ".NET Portal",
+      subsc_status: "Active",
+      department_id: 2,
+    },
+    {
+      subsc_name: "Mobile Starter",
+      subsc_price: 79,
+      subsc_type: "Monthly",
+      subsc_currency: "USD",
+      renew_date: "2025-12-05",
+      portal_detail: "Mobile Portal",
+      subsc_status: "Active",
+      department_id: 3,
+    },
+    {
+      subsc_name: "UI/UX Premium",
+      subsc_price: 199,
+      subsc_type: "Yearly",
+      subsc_currency: "USD",
+      renew_date: "2026-11-05",
+      portal_detail: "UI/UX Portal",
+      subsc_status: "Active",
+      department_id: 4,
+    },
+    {
+      subsc_name: "Marketing Basic",
+      subsc_price: 50,
+      subsc_type: "Monthly",
+      subsc_currency: "USD",
+      renew_date: "2025-12-05",
+      portal_detail: "Marketing Portal",
+      subsc_status: "Active",
+      department_id: 5,
+    },
+    {
+      subsc_name: "DevOps Standard",
+      subsc_price: 120,
+      subsc_type: "Monthly",
+      subsc_currency: "USD",
+      renew_date: "2025-12-05",
+      portal_detail: "DevOps Portal",
+      subsc_status: "Active",
+      department_id: 6,
+    },
+    {
+      subsc_name: "HR Basic",
+      subsc_price: 60,
+      subsc_type: "Monthly",
+      subsc_currency: "USD",
+      renew_date: "2025-12-05",
+      portal_detail: "HR Portal",
+      subsc_status: "Active",
+      department_id: 7,
+    },
+    {
+      subsc_name: "PHP Starter",
+      subsc_price: 70,
+      subsc_type: "Monthly",
+      subsc_currency: "USD",
+      renew_date: "2025-12-05",
+      portal_detail: "PHP Portal",
+      subsc_status: "Active",
+      department_id: 8,
+    },
+    {
+      subsc_name: "Digital Marketing Pro",
+      subsc_price: 150,
+      subsc_type: "Monthly",
+      subsc_currency: "USD",
+      renew_date: "2025-12-05",
+      portal_detail: "Digital Marketing Portal",
+      subsc_status: "Active",
+      department_id: 9,
+    },
+    {
+      subsc_name: "Fullstack Pro",
+      subsc_price: 199,
+      subsc_type: "Yearly",
+      subsc_currency: "USD",
+      renew_date: "2026-11-05",
+      portal_detail: "Fullstack Portal",
+      subsc_status: "Active",
+      department_id: 1,
+    },
+  ]);
+}
+

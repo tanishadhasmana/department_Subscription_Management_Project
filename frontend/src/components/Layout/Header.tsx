@@ -71,7 +71,7 @@ const Header: React.FC<HeaderProps> = ({ title, right }) => {
       <div className="flex items-center gap-4">
         {right}
         <span className="text-gray-700">
-          Welcome, {user?.firstName || "Admin"}
+          Welcome, {user?.first_name }
         </span>
         <button
           onClick={confirmLogout}

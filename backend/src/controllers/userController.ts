@@ -240,10 +240,16 @@ export const getMe = async (req: Request, res: Response) => {
 // ----------------------------
 export const deleteUser = async (req: Request, res: Response) => {
   try {
-    const userId = Number(req.params.id);
-    if (isNaN(userId)) return res.status(400).json({ message: "Invalid user ID" });
+    const userIdToDelete = Number(req.params.id);
+    if (isNaN(userIdToDelete))
+      return res.status(400).json({ message: "Invalid user ID" });
 
-    const deleted = await deleteUserService(userId);
+    // Pass the ID of the user performing the deletion
+    const performedById = req.user?.id; 
+    if (!performedById)
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const deleted = await deleteUserService(userIdToDelete, performedById);
     if (!deleted) return res.status(404).json({ message: "User not found" });
 
     return res.status(200).json({ message: "User deleted successfully" });
