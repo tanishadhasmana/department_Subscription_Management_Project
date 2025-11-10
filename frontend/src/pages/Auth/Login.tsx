@@ -20,7 +20,7 @@ const Login = () => {
     formState: { errors, isSubmitting },
     setError,
   } = useForm<LoginForm>({
-    mode: "onChange",         // ✅ validate while typing
+    mode: "onChange", // ✅ validate while typing
     reValidateMode: "onChange",
   });
 
@@ -35,7 +35,7 @@ const Login = () => {
       });
 
       const backendUser = res.data.user;
-      
+
       // ✅ Map backend response to frontend User type
       const mappedUser: User = {
         id: backendUser.id,
@@ -44,7 +44,7 @@ const Login = () => {
         email: backendUser.email,
         phone_no: backendUser.phone_no,
         role_id: backendUser.role_id,
-        department_name: backendUser.department_name,
+         role_name: backendUser.role_name,
         status: backendUser.status,
         permissions: backendUser.permissions || [],
       };
@@ -53,12 +53,14 @@ const Login = () => {
       login(mappedUser);
 
       navigate("/dashboard", { replace: true });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Login error:", err);
       setError("email", {
         type: "server",
-        message: err.response?.data?.message || "Please enter valid email or password.",
+        message:
+          err.response?.data?.message ||
+          "Please enter valid email or password.",
       });
     }
   };
@@ -77,10 +79,10 @@ const Login = () => {
         <input
           {...register("email", {
             required: "Email is required",
-            pattern: {
-              value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i,
-              message: "Enter a valid email address",
-            },
+            // pattern: {
+            //   value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i,
+            //   message: "Enter a valid email address",
+            // },
           })}
           className={`w-full border p-2 rounded mb-1 ${
             errors.email ? "border-red-500" : ""
@@ -104,9 +106,7 @@ const Login = () => {
           placeholder="Password"
         />
         {errors.password && (
-          <p className="text-red-500 text-sm mb-2">
-            {errors.password.message}
-          </p>
+          <p className="text-red-500 text-sm mb-2">{errors.password.message}</p>
         )}
 
         <button

@@ -10,6 +10,7 @@ import cookieParser from "cookie-parser";
 import dashboardRoute from "./src/routes/dashboardRoute";
 import userRoute from "./src/routes/userRoutes";
 import subscriptionRoute from "./src/routes/subscriptionRoutes";
+import departmentRoute from "./src/routes/departmentRoutes"
 
 dotenv.config();
 
@@ -30,7 +31,9 @@ app.use(
       "Accept",
       "Authorization",
       "X-Requested-With",
+      "Cookie"
     ],
+    exposedHeaders: ["Set-Cookie"]
   })
 );
 
@@ -71,6 +74,7 @@ app.get("/", (req: Request, res: Response) => {
 ---------------------------- */
 app.use("/api/dashboard", dashboardRoute);
 app.use("/api/users", userRoute);
+app.use("/api/departments", departmentRoute);
 app.use("/api/subscriptions", subscriptionRoute);
 
 /* ---------------------------

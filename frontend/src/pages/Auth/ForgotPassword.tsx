@@ -22,7 +22,9 @@ const ForgotPassword: React.FC = () => {
   const onSubmit = async (data: FormType) => {
     try {
       await api.post("/password/forgot-password", data);
-      toast.success("Reset link sent successfully! Check your Mailtrap inbox in dev.");
+      toast.success(
+        "Reset link sent successfully! Check your Mailtrap inbox in dev."
+      );
       setTimeout(() => nav("/login"), 1500);
     } catch (err) {
       console.error(err);
@@ -47,10 +49,10 @@ const ForgotPassword: React.FC = () => {
           <input
             {...register("email", {
               required: "Email is required",
-              pattern: {
-                value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i,
-                message: "Enter a valid email address",
-              },
+              // pattern: {
+              //   value: /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i,
+              //   message: "Enter a valid email address",
+              // },
             })}
             placeholder="Enter your email"
             className={`w-full border p-2 rounded mb-1 ${
@@ -58,9 +60,7 @@ const ForgotPassword: React.FC = () => {
             }`}
           />
           {errors.email && (
-            <p className="text-red-500 text-sm mb-3">
-              {errors.email.message}
-            </p>
+            <p className="text-red-500 text-sm mb-3">{errors.email.message}</p>
           )}
 
           <div className="flex items-center justify-between mt-2">

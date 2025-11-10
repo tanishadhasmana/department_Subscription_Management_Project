@@ -1,5 +1,5 @@
 import api from "../lib/api";
-import type { PermissionItem } from "../types/permission";
+import type { PermissionItem } from "../types/Permission";
 
 export const getAllPermissions = async (): Promise<PermissionItem[]> => {
   const res = await api.get("/permissions");

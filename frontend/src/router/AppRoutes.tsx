@@ -7,7 +7,6 @@ import { useAuth } from "../hooks/useAuth";
 import Dashboard from "../pages/Dashboard/Dashboard";
 import SubscriptionList from "../pages/Subscription/SubscriptionList";
 import UserList from "../pages/User/UserList";
-import AddUser from "../pages/User/AddUser.tsx";
 import AddSubscription from "../pages/Subscription/AddSubscription.tsx";
 
 // auth pages
@@ -61,7 +60,7 @@ const AppRouter = () => {
               </ProtectedRoute>
             }
           />
-          <Route
+          {/* <Route
             path="/users/add"
             element={
               <ProtectedRoute requiredPermission="user_add">
@@ -76,7 +75,7 @@ const AppRouter = () => {
                 <AddUser />
               </ProtectedRoute>
             }
-          />
+          /> */}
 
           {/* Subscriptions */}
           <Route

@@ -27,38 +27,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     });
   };
 
-  // Move checkSession into component scope so all effects can call it
-  // const checkSession = useCallback(async () => {
-  //   try {
-  //     const res = await api.get("/users/me", { withCredentials: true });
-  //     const backendUser = res.data?.user;
-
-  //     if (backendUser) {
-  //       const mappedUser: User = {
-  //         id: backendUser.id,
-  //         firstName: backendUser.first_name,
-  //         lastName: backendUser.last_name,
-  //         email: backendUser.email,
-  //         phone: backendUser.phone_no,
-  //         role_id: backendUser.role_id,
-  //         departmentName: backendUser.department_name,
-  //         status: backendUser.status,
-  //         permissions: backendUser.permissions || [],
-  //       };
-
-  //       console.log("Session verified, user:", mappedUser);
-  //       setUser(mappedUser);
-  //     } else {
-  //       setUser(null);
-  //     }
-  //   } catch (err: any) {
-  //     console.log("Session check failed:", err.response?.status);
-  //     setUser(null);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }, []);
-  // inside AuthProvider (keep your imports and other code)
 const checkSession = useCallback(async () => {
   try {
     // we purposely do not log this request success always — keep logs minimal
@@ -67,15 +35,23 @@ const checkSession = useCallback(async () => {
 
     if (backendUser) {
       const mappedUser: User = {
-        id: backendUser.id,
-        first_name: backendUser.first_name,
-        last_name: backendUser.last_name,
-        email: backendUser.email,
-        phone_no: backendUser.phone_no,
-        role_id: backendUser.role_id,
-        department_name: backendUser.department_name,
-        status: backendUser.status,
-        permissions: backendUser.permissions || [],
+        // id: backendUser.id,
+        // first_name: backendUser.first_name,
+        // last_name: backendUser.last_name,
+        // email: backendUser.email,
+        // phone_no: backendUser.phone_no,
+        // role_id: backendUser.role_id,
+        // status: backendUser.status,
+        // permissions: backendUser.permissions || [],
+         id: backendUser.id,
+          first_name: backendUser.first_name,
+          last_name: backendUser.last_name,  
+          email: backendUser.email,
+          phone_no: backendUser.phone_no,   
+          role_id: backendUser.role_id,
+          role_name: backendUser.role_name,
+          status: backendUser.status,
+          permissions: backendUser.permissions || [],
       };
 
       setUser(mappedUser);
