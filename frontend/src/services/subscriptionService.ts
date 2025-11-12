@@ -45,10 +45,21 @@ export const getSubscriptions = async (
 };
 
 // Get subscription by ID
+// export const getSubscriptionById = async (id: number): Promise<Subscription> => {
+//   const res = await api.get(`/subscriptions/${id}`, { withCredentials: true });
+//   return res.data;
+// };
+
+// Get subscription by ID
 export const getSubscriptionById = async (id: number): Promise<Subscription> => {
   const res = await api.get(`/subscriptions/${id}`, { withCredentials: true });
-  return res.data;
+  // backend returns { success, message, data: { ... } }
+  // return the inner data if present, otherwise fallback to res.data
+  return res.data?.data ?? res.data;
 };
+
+
+
 
 // Create new subscription
 export const createSubscription = async (subscription: Partial<Subscription>) => {

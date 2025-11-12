@@ -10,6 +10,8 @@ import {
   exportSubscriptionsCSVService,
 } from "../services/subscriptionService";
 import { responseMessage } from "../utils/responseMessage";
+import { validationMessage } from "../utils/validationMessage";
+import { schemas } from "../validation/Validation";
 
 // ----------------------------
 // Get Subscriptions Count
@@ -17,30 +19,35 @@ import { responseMessage } from "../utils/responseMessage";
 export const getSubscriptionsCount = async (req: Request, res: Response) => {
   try {
     const total = await getSubscriptionsCountService();
-    res.status(200).json({ total });
-  } catch (err: any) {
-    console.error("Failed to get subscriptions count:", err);
-    res
-      .status(500)
-      .json({ message: err.message || "Failed to get subscriptions count" });
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.fetched("Subscription count"),
+      total,
+    });
+  } catch (error: any) {
+    console.error("Failed to get subscriptions count:", error);
+    return res.status(500).json({
+      success: false,
+      message: responseMessage.error("getting subscription count"),
+      error: error.message,
+    });
   }
 };
 
 // ----------------------------
-// Get All Subscriptions
+// Get All Subscriptions (with search, filter, pagination)
 // ----------------------------
 export const getAllSubscriptions = async (req: Request, res: Response) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-
     const search = (req.query.search as string) || "";
     const column = (req.query.column as string) || "subsc_name";
+
     const status = (req.query.status as string) || "all";
     const sortBy = (req.query.sortBy as string) || undefined;
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || "desc";
 
-    // Pass column parameter as well
     const result = await getAllSubscriptionsService(
       page,
       limit,
@@ -51,14 +58,18 @@ export const getAllSubscriptions = async (req: Request, res: Response) => {
       column
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: responseMessage.fetched("Subscriptions"),
+      message: responseMessage.subscription.fetchSuccess,
       ...result,
     });
   } catch (error: any) {
     console.error("Error in getAllSubscriptions controller:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: responseMessage.error("fetching subscriptions"),
+      error: error.message,
+    });
   }
 };
 
@@ -67,20 +78,38 @@ export const getAllSubscriptions = async (req: Request, res: Response) => {
 // ----------------------------
 export const getSubscriptionById = async (req: Request, res: Response) => {
   try {
-    const subscription = await getSubscriptionByIdService(
-      Number(req.params.id)
-    );
-    if (!subscription)
-      return res.status(404).json({ message: "Subscription not found" });
+    const id = Number(req.params.id);
+    if (isNaN(id))
+      return res
+        .status(400)
+        .json({ success: false, message: responseMessage.invalidInput("ID") });
 
-    res.status(200).json(subscription);
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
+    const subscription = await getSubscriptionByIdService(id);
+    if (!subscription)
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: responseMessage.subscription.notFound,
+        });
+
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.fetched("Subscription"),
+      data: subscription,
+    });
+  } catch (error: any) {
+    console.error("Error fetching subscription by ID:", error);
+    return res.status(500).json({
+      success: false,
+      message: responseMessage.error("fetching subscription"),
+      error: error.message,
+    });
   }
 };
 
 // ----------------------------
-// Export All Subscriptions
+// Export All Subscriptions (CSV)
 // ----------------------------
 export const exportAllSubscriptions = async (req: Request, res: Response) => {
   try {
@@ -90,10 +119,15 @@ export const exportAllSubscriptions = async (req: Request, res: Response) => {
       "attachment; filename=subscriptions_export.csv"
     );
     res.setHeader("Content-Type", "text/csv");
-    res.status(200).send(csvContent);
-  } catch (err: any) {
-    console.error("Export failed:", err);
-    res.status(500).json({ message: "Failed to export subscriptions" });
+
+    return res.status(200).send(csvContent);
+  } catch (error: any) {
+    console.error("Export failed:", error);
+    return res.status(500).json({
+      success: false,
+      message: responseMessage.error("exporting subscriptions"),
+      error: error.message,
+    });
   }
 };
 
@@ -101,78 +135,175 @@ export const exportAllSubscriptions = async (req: Request, res: Response) => {
 // Create Subscription
 // ----------------------------
 export const createSubscription = async (req: Request, res: Response) => {
-  try {
-    const subscription = await createSubscriptionService({
-      subsc_name: req.body.subsc_name,
-      subsc_type: req.body.subsc_type,
-      subsc_price: req.body.subsc_price,
-      subsc_currency: req.body.subsc_currency,
-      renew_date: req.body.renew_date,
-      portal_detail: req.body.portal_detail, // added
-      payment_method: req.body.payment_method, // added
-      subsc_status: req.body.subsc_status,
-      department_id: req.body.department_id,
-      purchase_date: req.body.purchase_date,
-    });
 
-    res.status(201).json({ subscription });
-  } catch (err: any) {
-    res.status(500).json({ message: err.message })
+  try {
+    const validation = schemas.subscriptionSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message:
+          validation.error.issues[0].message ||
+          validationMessage.invalid("input"),
+      });
+    }
+
+    const subscription = await createSubscriptionService(validation.data);
+
+    return res.status(201).json({
+      success: true,
+      message: responseMessage.subscription.createSuccess,
+      data: subscription,
+    });
+  } catch (error: any) {
+    console.error("Create subscription error:", error);
+    return res.status(500).json({
+      success: false,
+      message: responseMessage.error("creating subscription"),
+      error: error.message,
+    });
   }
 };
 
-// ----------------------------
-// Update Subscription
-// ----------------------------
+
 export const updateSubscription = async (req: Request, res: Response) => {
   try {
     const subscriptionId = Number(req.params.id);
-    if (isNaN(subscriptionId))
-      return res.status(400).json({ message: "Invalid subscription ID" });
+    if (isNaN(subscriptionId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: validationMessage.invalid("ID") });
+    }
 
-    const updateData = {
-      subsc_name: req.body.subsc_name,
-      subsc_type: req.body.subsc_type,
-      subsc_price: req.body.subsc_price,
-      subsc_currency: req.body.subsc_currency,
-      renew_date: req.body.renew_date || null,
-      portal_detail: req.body.portal_detail || null, // added
-      purchase_date: req.body.purchase_date,
-      payment_method: req.body.payment_method || null, // added
-      subsc_status: req.body.
-      subsc_status || "active",
-      department_id: req.body.department_id
-        ? Number(req.body.department_id)
-        : null,
-    };
+    const validation = schemas.updateSubscriptionSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        message: validation.error.issues[0].message || validationMessage.invalid("input"),
+      });
+    }
 
     const updatedSubscription = await updateSubscriptionService(
       subscriptionId,
-      updateData
+      validation.data
     );
-    res.status(200).json(updatedSubscription);
-  } catch (err: any) {
-    console.error("Update subscription error:", err);
-    res.status(500).json({ message: err.message || "Something went wrong" });
+
+    if (!updatedSubscription) {
+      return res
+        .status(404)
+        .json({ success: false, message: responseMessage.subscription.notFound });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.subscription.updateSuccess,
+      data: updatedSubscription,
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: responseMessage.error("updating subscription"),
+      error: error.message,
+    });
   }
 };
 
+
 // ----------------------------
-// Update Subscription Status
+// Update Subscription Status (toggle active/inactive)
 // ----------------------------
+
+
+// export const updateSubscriptionStatus = async (req: Request, res: Response) => {
+//   try {
+//     const subscriptionId = Number(req.params.id);
+//     const { status } = req.body;
+
+//     if (isNaN(subscriptionId)) {
+//       return res
+//         .status(400)
+//         .json({ success: false, message: validationMessage.invalid("ID") });
+//     }
+
+//     if (!["Active", "Inactive"].includes(status)) {
+//       return res.status(400).json({
+//         success: false,
+//         message: validationMessage.invalid("status"),
+//       });
+//     }
+
+//     const updatedSubscription = await updateSubscriptionStatusService(
+//       subscriptionId,
+//       status
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       message: responseMessage.updated("Subscription status"),
+//       data: updatedSubscription,
+//     });
+//   } catch (error: any) {
+//     console.error(error);
+//     return res.status(500).json({
+//       success: false,
+//       message: responseMessage.error("updating subscription status"),
+//       error: error.message,
+//     });
+//   }
+// };
+
 export const updateSubscriptionStatus = async (req: Request, res: Response) => {
   try {
     const subscriptionId = Number(req.params.id);
-    const { status } = req.body;
+    let { status } = req.body;
+
+    if (isNaN(subscriptionId)) {
+      return res.status(400).json({
+        success: false,
+        message: validationMessage.invalid("ID"),
+      });
+    }
+
+    // ✅ Normalize and validate status in a case-insensitive way
+    if (typeof status !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: validationMessage.invalid("status"),
+      });
+    }
+
+    const normalized = status.toLowerCase();
+    if (!["active", "inactive"].includes(normalized)) {
+      return res.status(400).json({
+        success: false,
+        message: validationMessage.invalid("status"),
+      });
+    }
+
+    // ✅ Convert normalized value to DB format (capitalized)
+    status = normalized === "active" ? "Active" : "Inactive";
+
     const updatedSubscription = await updateSubscriptionStatusService(
       subscriptionId,
       status
     );
-    res.status(200).json(updatedSubscription);
-  } catch (err: any) {
-    res.status(500).json({ message: err.message });
+
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.updated("Subscription status"),
+      data: updatedSubscription,
+    });
+  } catch (error: any) {
+    console.error("Update status error:", error);
+    return res.status(500).json({
+      success: false,
+      message: responseMessage.error("updating subscription status"),
+      error: error.message,
+    });
   }
 };
+
+
 
 // ----------------------------
 // Delete Subscription
@@ -181,27 +312,39 @@ export const deleteSubscription = async (req: Request, res: Response) => {
   try {
     const subscriptionIdToDelete = Number(req.params.id);
     if (isNaN(subscriptionIdToDelete))
-      return res.status(400).json({ message: "Invalid subscription ID" });
+      return res
+        .status(400)
+        .json({ success: false, message: responseMessage.invalidInput("ID") });
 
-    // Pass the ID of the user performing the deletion
     const performedById = req.user?.id;
     if (!performedById)
-      return res.status(401).json({ message: "Unauthorized" });
+      return res
+        .status(401)
+        .json({ success: false, message: responseMessage.unauthorized });
 
     const deleted = await deleteSubscriptionService(
       subscriptionIdToDelete,
       performedById
     );
-    if (!deleted)
-      return res.status(404).json({ message: "Subscription not found" });
 
-    return res
-      .status(200)
-      .json({ message: "Subscription deleted successfully" });
-  } catch (err: any) {
-    console.error("Delete subscription error:", err);
-    return res
-      .status(500)
-      .json({ message: err.message || "Failed to delete subscription" });
+    if (!deleted)
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message: responseMessage.subscription.notFound,
+        });
+
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.subscription.deleteSuccess,
+    });
+  } catch (error: any) {
+    console.error("Delete subscription error:", error);
+    return res.status(500).json({
+      success: false,
+      message: responseMessage.error("deleting subscription"),
+      error: error.message,
+    });
   }
 };

@@ -23,11 +23,15 @@ const AddSubscription: React.FC = () => {
     handleSubmit,
     setValue,
     watch,
+    trigger, //by using this we can use on blur to every i/p
     formState: { errors, isSubmitting },
   } = useForm<SubscriptionFormData>({
     defaultValues: { subsc_status: "active" },
     mode: "onChange",
   });
+
+  const watchedName = watch("subsc_name", "");
+const portalDetail = watch("portal_detail") || "";
 
   // Watch purchase_date and type to auto-calc renew_date
   const watchedPurchaseDate = watch("purchase_date");
@@ -83,23 +87,19 @@ const AddSubscription: React.FC = () => {
     }
   }, [watchedPurchaseDate, watchedType, setValue]);
 
-  // Fetch departments
+  
   useEffect(() => {
     (async () => {
       try {
         const res = await api.get("/departments", { withCredentials: true });
-        const data =
-          Array.isArray(res.data) && res.data.length > 0
-            ? res.data
-            : res.data.departments || [];
+        const data = res.data.departments || res.data; // works for both shapes
 
-        const formatted = data.map(
-          (d: { id: number; department_name: string }) => ({
+        setDepartments(
+          data.map((d: { id: number; department_name: string }) => ({
             id: d.id,
             name: d.department_name,
-          })
+          }))
         );
-        setDepartments(formatted);
       } catch (err) {
         console.error("Failed to fetch departments:", err);
         toast.error("Failed to load departments");
@@ -188,41 +188,106 @@ const AddSubscription: React.FC = () => {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Subscription Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Subscription Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              {...register("subsc_name", { required: "Name is required" })}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter subscription name"
-            />
-            {errors.subsc_name && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.subsc_name.message}
-              </p>
-            )}
-          </div>
+       
+{/* Subscription Name */}
+<div>
+  <label className="block text-sm font-medium text-gray-700">
+    Subscription Name <span className="text-red-500">*</span>
+  </label>
 
-          {/* Subscription Price */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Price <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              {...register("subsc_price", { required: "Price is required" })}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter price"
-            />
-            {errors.subsc_price && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.subsc_price.message}
-              </p>
-            )}
-          </div>
+  <input
+    {...register("subsc_name", {
+      required: "Name is required",
+      maxLength: { value: 50, message: "Max 50 characters allowed" },
+    })}
+    onBlur={() => trigger("subsc_name")}
+    onChange={(e) => {
+      const v = e.target.value;
+      // block typing beyond 50
+      if (v.length <= 50) {
+        setValue("subsc_name", v);
+      } else {
+        // truncate (defensive)
+        setValue("subsc_name", v.slice(0, 50));
+      }
+      // show validation immediately when limit reached
+      if (v.length >= 50) trigger("subsc_name");
+    }}
+    value={watchedName}
+    maxLength={50}
+    autoFocus
+    className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+    placeholder="Enter subscription name"
+  />
+
+  {/* RHF validation message */}
+  {errors.subsc_name && (
+    <p className="text-red-500 text-sm mt-1">{errors.subsc_name.message}</p>
+  )}
+
+  {/* live counter + immediate warning when >= limit */}
+  <p
+    className={`text-sm mt-1 ${
+      watch("subsc_name", "").length >= 50 ? "text-red-500" : "text-gray-500"
+    }`}
+  >
+    {watch("subsc_name", "").length}/50 characters
+    {watch("subsc_name", "").length >= 50 && " — maximum reached"}
+  </p>
+</div>
+
+        {/* Subscription Price */}
+<div>
+  <label className="block text-sm font-medium text-gray-700">
+    Price <span className="text-red-500">*</span>
+  </label>
+
+  <input
+    type="number"
+    step="0.01"
+    {...register("subsc_price", {
+      required: "Price is required",
+      max: { value: 999999999999999, message: "Max 15 digits allowed" },
+    })}
+    onBlur={() => trigger("subsc_price")}
+    onInput={(e: React.FormEvent<HTMLInputElement>) => {
+      const input = e.currentTarget;
+      const raw = input.value;
+
+      if (raw.length > 15) {
+        const truncated = raw.slice(0, 15);
+        input.value = truncated;
+        // ✅ type-safe setValue call
+        setValue("subsc_price", truncated === "" ? 0 : Number(truncated), {
+          shouldValidate: true,
+        });
+      } else {
+        setValue("subsc_price", raw === "" ? 0 : Number(raw), {
+          shouldValidate: true,
+        });
+      }
+
+      if (raw.length >= 15) trigger("subsc_price");
+    }}
+    className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+    placeholder="Enter price"
+  />
+
+  {errors.subsc_price && (
+    <p className="text-red-500 text-sm mt-1">{errors.subsc_price.message}</p>
+  )}
+
+  <p
+    className={`text-sm mt-1 ${
+      String(watch("subsc_price") ?? "").length >= 15
+        ? "text-red-500"
+        : "text-gray-500"
+    }`}
+  >
+    {String(watch("subsc_price") ?? "").length}/15 characters
+    {String(watch("subsc_price") ?? "").length >= 15 && " — maximum reached"}
+  </p>
+</div>
 
           {/* Currency */}
           <div>
@@ -233,6 +298,7 @@ const AddSubscription: React.FC = () => {
               {...register("subsc_currency", {
                 required: "Currency is required",
               })}
+              onBlur={() => trigger("subsc_currency")}
               className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
             >
               <option value="">Select Currency</option>
@@ -260,6 +326,7 @@ const AddSubscription: React.FC = () => {
             </label>
             <select
               {...register("subsc_type", { required: "Type is required" })}
+              onBlur={() => trigger("subsc_type")}
               className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
             >
               <option value="">Select Type</option>
@@ -284,6 +351,7 @@ const AddSubscription: React.FC = () => {
               {...register("purchase_date", {
                 required: "Purchase date is required",
               })}
+              onBlur={() => trigger("purchase_date")}
               className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
             />
             {errors.purchase_date && (
@@ -314,25 +382,47 @@ const AddSubscription: React.FC = () => {
             )}
           </div>
 
-          {/* Payment Method */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Payment Method <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              {...register("payment_method", {
-                required: "Payment method is required",
-              })}
-              rows={3}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter payment method details (e.g., UPI ID, card, PayPal email)"
-            />
-            {errors.payment_method && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.payment_method.message}
-              </p>
-            )}
-          </div>
+        {/* Payment Method */}
+<div>
+  <label className="block text-sm font-medium text-gray-700">
+    Payment Method <span className="text-red-500">*</span>
+  </label>
+
+  <textarea
+    {...register("payment_method", {
+      required: "Payment method is required",
+      maxLength: { value: 50, message: "Max 50 characters allowed" },
+    })}
+    onBlur={() => trigger("payment_method")}
+    rows={3}
+    maxLength={50}
+    onChange={(e) => {
+      const v = e.target.value;
+      if (v.length <= 50) {
+        setValue("payment_method", v);
+      } else {
+        setValue("payment_method", v.slice(0, 50));
+      }
+      if (v.length >= 50) trigger("payment_method");
+    }}
+    className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+    placeholder="Enter payment method details"
+  />
+
+  {errors.payment_method && (
+    <p className="text-red-500 text-sm mt-1">{errors.payment_method.message}</p>
+  )}
+
+  <p
+    className={`text-sm mt-1 ${
+      watch("payment_method", "").length >= 50 ? "text-red-500" : "text-gray-500"
+    }`}
+  >
+    {watch("payment_method", "").length}/50 characters
+    {watch("payment_method", "").length >= 50 && " — maximum reached"}
+  </p>
+</div>
+
 
           {/* Department */}
           <div className="mb-10">
@@ -344,6 +434,7 @@ const AddSubscription: React.FC = () => {
                 required: "Department is required",
                 valueAsNumber: true,
               })}
+              onBlur={() => trigger("department_id")}
               className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
             >
               <option value="">Select Department</option>
@@ -380,34 +471,54 @@ const AddSubscription: React.FC = () => {
             )}
           </div>
 
-          {/* Portal Details */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Portal Details <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              {...register("portal_detail", {
-                required: "Portal details are required",
-              })}
-              rows={3}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter portal details or notes"
-            ></textarea>
-            {errors.portal_detail && (
-              <p className="text-red-500 text-sm mt-1">
-                {errors.portal_detail.message}
-              </p>
-            )}
-          </div>
-        </div>
+        {/* Portal Details */}
+<div className="md:col-span-2">
+  <label className="block text-sm font-medium text-gray-700">
+    Portal Details <span className="text-red-500">*</span>
+  </label>
 
+  <textarea
+    {...register("portal_detail", {
+      required: "Portal details are required",
+      maxLength: { value: 120, message: "Max 120 characters allowed" },
+    })}
+    onBlur={() => trigger("portal_detail")}
+    rows={3}
+    maxLength={120}
+    onChange={(e) => {
+      const v = e.target.value;
+      if (v.length <= 120) {
+        setValue("portal_detail", v);
+      } else {
+        setValue("portal_detail", v.slice(0, 120));
+      }
+      if (v.length >= 120) trigger("portal_detail");
+    }}
+    className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+    placeholder="Enter portal details or notes"
+  ></textarea>
+
+  {errors.portal_detail && (
+    <p className="text-red-500 text-sm mt-1">{errors.portal_detail.message}</p>
+  )}
+
+  <p
+    className={`text-sm mt-1 ${
+      portalDetail.length >= 120 ? "text-red-500" : "text-gray-500"
+    }`}
+  >
+   {portalDetail.length}/120 characters
+  {portalDetail.length >= 120 && " — maximum reached"}
+  </p>
+</div>
+        </div>
         <div className="flex justify-end mt-6">
           <button
             type="submit"
             disabled={isSubmitting}
             className={`${
               isSubmitting ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
-            } text-white px-6 py-2 rounded`}
+            } text-white px-6 py-2 rounded cursor-pointer`}
           >
             {isSubmitting ? "Saving..." : editing ? "Update" : "Add"}
           </button>

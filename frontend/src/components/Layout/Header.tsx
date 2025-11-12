@@ -38,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({ title, right }) => {
               </button>
               <button
                 onClick={() => handleLogoutConfirmed(onClose)}
-                className="px-5 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                className="px-5 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 "
               >
                 Logout
               </button>
@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ title, right }) => {
         </span>
         <button
           onClick={confirmLogout}
-          className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition cursor-pointer"
         >
           Logout
         </button>
