@@ -51,7 +51,7 @@ const Pagination: React.FC<PaginationProps> = ({
         >
           {[5, 10, 20, 50].map((num) => (
             <option key={num} value={num}>
-              {num} / page
+              {num}
             </option>
           ))}
         </select>

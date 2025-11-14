@@ -17,12 +17,28 @@ export const forgotPasswordService = async (email: string) => {
   const resetLink = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}`;
 
   const subject = "Reset your admin panel password";
-  const text = `Hello ${user.firstName || ""}, Use the link below to reset your password (expires in ${RESET_EXPIRES}): ${resetLink}`;
-  const html = `<p>Hello ${user.firstName || ""},</p>
-    <p>Click below to reset your password (expires in ${RESET_EXPIRES}):</p>
-    <a href="${resetLink}" style="padding:10px 16px;background:#0366d6;color:white;text-decoration:none;border-radius:6px;">Reset password</a>`;
+  const text = ` <p>Hello ${user.firstName || ""},</p>
+  <p>Click below to reset your password (expires in ${RESET_EXPIRES}):</p>
+  <a href="${resetLink}"
+    style="
+      display: inline-block;
+      background-color: #2563eb; /* Tailwind bg-blue-600 */
+      color: white;
+      padding: 7px 22px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      transition: background-color 0.3s ease;
+    "
+    onmouseover="this.style.backgroundColor='#1d4ed8';"  /* hover:bg-blue-700 */
+    onmouseout="this.style.backgroundColor='#2563eb';"
+  >
+    Reset password
+  </a>`;
 
-  await sendMail(user.email, subject, text, html);
+  await sendMail(user.email, subject, text, text);
 };
 
 export const resetPasswordService = async (token: string, newPassword: string) => {
@@ -33,6 +49,6 @@ export const resetPasswordService = async (token: string, newPassword: string) =
     .where({ id: decoded.id })
     .update({
       password: hashed,
-      updatedAt: db.fn.now(),
+      updated_at: db.fn.now(),
     });
 };

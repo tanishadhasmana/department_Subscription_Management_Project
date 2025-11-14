@@ -10,10 +10,12 @@ interface SubscriptionData {
   subsc_currency: string;
   renew_date: string;
   department_name: string;
+  subc_url?: string;
 }
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
+  // "2025-11-19" → "November 19, 2025"
   return date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
@@ -21,6 +23,7 @@ const formatDate = (dateString: string): string => {
   });
 };
 
+// Calculate days until expiry from today, exact midnight, hr-min-sec-ms
 const calculateDaysUntilExpiry = (renewDate: string): number => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -47,6 +50,7 @@ export const checkAndSendReminders = async () => {
         "s.subsc_price",
         "s.subsc_currency",
         "s.renew_date",
+        "s.subc_url",
         "d.deptName as department_name"
       )
       .where("s.subsc_status", "Active")
@@ -55,7 +59,7 @@ export const checkAndSendReminders = async () => {
 
     console.log(`📊 Found ${subscriptions.length} active subscription(s) to check`);
 
-    const reminders = [7, 3, 1]; // Days before expiry to send reminders
+    const reminders = [7, 3, 0]; // Days before expiry to send reminders
     let emailsSent = 0;
 
     for (const subscription of subscriptions) {
@@ -76,6 +80,7 @@ export const checkAndSendReminders = async () => {
             subscriptionName: subscription.subsc_name,
             departmentName: subscription.department_name || "N/A",
             price: subscription.subsc_price,
+            url: subscription.subc_url || "http://localhost:5173/subscription",
             currency: subscription.subsc_currency,
             expiryDate: formatDate(subscription.renew_date),
             daysRemaining: daysUntilExpiry,

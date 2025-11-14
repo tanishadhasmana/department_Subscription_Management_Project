@@ -7,6 +7,10 @@ import api from "../../lib/api";
 import { getSubscriptionById } from "../../services/subscriptionService";
 import type { Subscription } from "../../types/Subscription";
 
+export const urlRegex =
+  // eslint-disable-next-line no-useless-escape
+  /^(https?:\/\/)([\w\-]+(\.[\w\-]+)+)([\/\w\-.,@?^=%&:;+#]*)?$/;
+
 type SubscriptionFormData = Omit<Subscription, "id">;
 
 const AddSubscription: React.FC = () => {
@@ -27,11 +31,11 @@ const AddSubscription: React.FC = () => {
     formState: { errors, isSubmitting },
   } = useForm<SubscriptionFormData>({
     defaultValues: { subsc_status: "active" },
-    mode: "onChange",
+    // mode: "onChange",
+    mode: "all",
   });
 
-  const watchedName = watch("subsc_name", "");
-const portalDetail = watch("portal_detail") || "";
+  // const watchedName = watch("subsc_name", "");
 
   // Watch purchase_date and type to auto-calc renew_date
   const watchedPurchaseDate = watch("purchase_date");
@@ -87,7 +91,6 @@ const portalDetail = watch("portal_detail") || "";
     }
   }, [watchedPurchaseDate, watchedType, setValue]);
 
-  
   useEffect(() => {
     (async () => {
       try {
@@ -114,68 +117,159 @@ const portalDetail = watch("portal_detail") || "";
     const fetchData = async () => {
       try {
         const data = await getSubscriptionById(Number(id));
-        (Object.keys(data) as (keyof SubscriptionFormData)[]).forEach((key) => {
-          let value = data[key];
 
-          // ✅ Fix for date fields
-          if (key === "purchase_date" || key === "renew_date") {
-            if (value) {
-              // ensure format YYYY-MM-DD
-              value = new Date(value).toISOString().split("T")[0];
+        // Wait until departments are loaded before setting form values
+        if (departments.length === 0) {
+          const checkInterval = setInterval(() => {
+            if (departments.length > 0) {
+              clearInterval(checkInterval);
+              fillForm(data);
             }
-          }
-
-          // ✅ Fix for status casing mismatch
-          if (key === "subsc_status" && typeof value === "string") {
-            value = value.toLowerCase();
-          }
-
-          // ✅ Fix null string fields
-          if (
-            (key === "payment_method" || key === "portal_detail") &&
-            value == null
-          ) {
-            value = "";
-          }
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          if (value !== undefined) setValue(key, value as any);
-        });
+          }, 100);
+        } else {
+          fillForm(data);
+        }
       } catch (err) {
         console.error("Failed to fetch subscription:", err);
         toast.error("Failed to load subscription data");
       }
     };
 
+    const fillForm = (data: SubscriptionFormData) => {
+      (Object.keys(data) as (keyof SubscriptionFormData)[]).forEach((key) => {
+        let value = data[key];
+
+        if (key === "purchase_date" || key === "renew_date") {
+          if (value) value = new Date(value).toISOString().split("T")[0];
+        }
+
+        if (key === "subsc_status" && typeof value === "string") {
+          value = value.toLowerCase();
+        }
+
+        if (
+          (key === "payment_method" || key === "portal_detail") &&
+          value == null
+        ) {
+          value = "";
+        }
+
+        if (value !== undefined) {
+          setValue(key, value as never, { shouldValidate: true });
+        }
+      });
+    };
+
     fetchData();
-  }, [editing, id, setValue]);
+  }, [editing, id, departments, setValue]);
+
+  // const onSubmit = async (formData: SubscriptionFormData) => {
+  //   try {
+  //     if (editing && id) {
+  //       await api.put(`/subscriptions/${id}`, formData, {
+  //         withCredentials: true,
+  //       });
+  //       toast.success("Subscription updated successfully");
+  //     } else {
+  //       await api.post("/subscriptions", formData, { withCredentials: true });
+  //       toast.success("Subscription created successfully");
+  //     }
+  //     nav("/subscription");
+  //   } catch (err: unknown) {
+  //     console.error("Save failed:", err);
+  //     if (err && typeof err === "object" && "response" in err) {
+  //       const axiosError = err as {
+  //         response?: { data?: { message?: string } };
+  //       };
+  //       toast.error(
+  //         axiosError.response?.data?.message || "Failed to save subscription"
+  //       );
+  //     } else {
+  //       toast.error("Something went wrong");
+  //     }
+  //   }
+  // };
+ 
 
   const onSubmit = async (formData: SubscriptionFormData) => {
-    try {
-      if (editing && id) {
-        await api.put(`/subscriptions/${id}`, formData, {
-          withCredentials: true,
-        });
-        toast.success("Subscription updated successfully");
-      } else {
-        await api.post("/subscriptions", formData, { withCredentials: true });
-        toast.success("Subscription created successfully");
-      }
+  console.log("🚀 === FORM SUBMISSION STARTED ===");
+  console.log("Form data:", formData);
+  
+  try {
+    if (editing && id) {
+      console.log("📝 Editing mode - ID:", id);
+      await api.put(`/subscriptions/${id}`, formData, { withCredentials: true });
+      console.log("✅ Update successful");
+      toast.success("Subscription updated successfully");
       nav("/subscription");
-    } catch (err: unknown) {
-      console.error("Save failed:", err);
-      if (err && typeof err === "object" && "response" in err) {
-        const axiosError = err as {
-          response?: { data?: { message?: string } };
-        };
-        toast.error(
-          axiosError.response?.data?.message || "Failed to save subscription"
-        );
-      } else {
-        toast.error("Something went wrong");
-      }
+      return;
     }
-  };
+
+    console.log("➕ Creating new subscription...");
+    const response = await api.post("/subscriptions", formData, { withCredentials: true });
+    console.log("✅ Create successful:", response);
+    toast.success("Subscription created successfully");
+    nav("/subscription");
+    
+  } catch (error: any) {
+    console.log("❌ ==========================================");
+    console.log("❌ ERROR CAUGHT IN CATCH BLOCK");
+    console.log("❌ ==========================================");
+    console.log("Error object:", error);
+    console.log("Has response?", !!error?.response);
+    console.log("Response:", error?.response);
+    console.log("Response status:", error?.response?.status);
+    console.log("Response data:", error?.response?.data);
+    console.log("Response message:", error?.response?.data?.message);
+    
+    const msg =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      "Failed to save subscription";
+
+    console.log("📝 Message extracted:", msg);
+    console.log("🔔 Calling toast.error with message:", msg);
+    
+    // Test if toast exists
+    console.log("Toast object:", toast);
+    console.log("Toast.error function:", toast.error);
+    
+    try {
+      const toastId = toast.error(msg, {
+        duration: 5000,
+        position: 'top-center',
+        style: {
+          background: '#ef4444',
+          color: '#fff',
+          fontWeight: 'bold',
+          fontSize: '18px',
+          padding: '16px',
+          borderRadius: '8px',
+        },
+      });
+//       const toastId = toast.error(msg, {
+//   id: "api-error-toast-" + Date.now(), // 🔥 UNIQUE TOAST ID
+//   duration: 5000,
+//   position: 'top-right',
+//   style: {
+//     background: '#ef4444',
+//     color: '#fff',
+//     fontWeight: 'bold',
+//     fontSize: '18px',
+//     padding: '16px',
+//     borderRadius: '8px',
+//   },
+// });
+
+      console.log("✅ Toast.error returned ID:", toastId);
+    } catch (toastError) {
+      console.error("❌ Toast.error failed:", toastError);
+    }
+    
+    console.log("❌ ==========================================");
+  }
+};
 
   return (
     <div className="p-8 overflow-visible">
@@ -183,111 +277,156 @@ const portalDetail = watch("portal_detail") || "";
         onSubmit={handleSubmit(onSubmit)}
         className="bg-white p-8 rounded shadow-md max-w-4xl mx-auto mt-6 overflow-visible"
       >
-        <h2 className="text-xl font-semibold mb-6 text-gray-800">
+        <h2 className="text-3xl font-bold mb-8 text-gray-800">
           {editing ? "Edit Subscription" : "Add Subscription"}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-       
-{/* Subscription Name */}
-<div>
-  <label className="block text-sm font-medium text-gray-700">
-    Subscription Name <span className="text-red-500">*</span>
-  </label>
+          {/* Subscription Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Subscription Name <span className="text-red-500">*</span>
+            </label>
 
-  <input
-    {...register("subsc_name", {
-      required: "Name is required",
-      maxLength: { value: 50, message: "Max 50 characters allowed" },
-    })}
-    onBlur={() => trigger("subsc_name")}
-    onChange={(e) => {
-      const v = e.target.value;
-      // block typing beyond 50
-      if (v.length <= 50) {
-        setValue("subsc_name", v);
-      } else {
-        // truncate (defensive)
-        setValue("subsc_name", v.slice(0, 50));
-      }
-      // show validation immediately when limit reached
-      if (v.length >= 50) trigger("subsc_name");
-    }}
-    value={watchedName}
-    maxLength={50}
-    autoFocus
-    className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
-    placeholder="Enter subscription name"
-  />
+            <input
+              {...register("subsc_name", {
+                required: "Name is required",
+                maxLength: { value: 50, message: "Max 50 characters allowed" },
+                validate: (v) =>
+                  v.trim().length > 0 ||
+                  "Name cannot start with spaces or be empty",
+              })}
+              onBlur={() => trigger("subsc_name")}
+              onChange={(e) => {
+                let v = e.target.value;
 
-  {/* RHF validation message */}
-  {errors.subsc_name && (
-    <p className="text-red-500 text-sm mt-1">{errors.subsc_name.message}</p>
-  )}
+                // Prevent leading spaces
+                if (v.startsWith(" ")) {
+                  v = v.trimStart();
+                  toast.error("Name cannot start with a space");
+                }
 
-  {/* live counter + immediate warning when >= limit */}
-  <p
-    className={`text-sm mt-1 ${
-      watch("subsc_name", "").length >= 50 ? "text-red-500" : "text-gray-500"
-    }`}
-  >
-    {watch("subsc_name", "").length}/50 characters
-    {watch("subsc_name", "").length >= 50 && " — maximum reached"}
-  </p>
-</div>
+                // Limit max length
+                if (v.length > 50) v = v.slice(0, 50);
 
-        {/* Subscription Price */}
-<div>
-  <label className="block text-sm font-medium text-gray-700">
-    Price <span className="text-red-500">*</span>
-  </label>
+                setValue("subsc_name", v, { shouldValidate: true });
+              }}
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.subsc_name ? "border-red-500" : ""
+              }`}
+              placeholder="Enter subscription name"
+            />
 
-  <input
-    type="number"
-    step="0.01"
-    {...register("subsc_price", {
-      required: "Price is required",
-      max: { value: 999999999999999, message: "Max 15 digits allowed" },
-    })}
-    onBlur={() => trigger("subsc_price")}
-    onInput={(e: React.FormEvent<HTMLInputElement>) => {
-      const input = e.currentTarget;
-      const raw = input.value;
+            {/* RHF validation message */}
+            {errors.subsc_name && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.subsc_name.message}
+              </p>
+            )}
+          </div>
 
-      if (raw.length > 15) {
-        const truncated = raw.slice(0, 15);
-        input.value = truncated;
-        // ✅ type-safe setValue call
-        setValue("subsc_price", truncated === "" ? 0 : Number(truncated), {
-          shouldValidate: true,
-        });
-      } else {
-        setValue("subsc_price", raw === "" ? 0 : Number(raw), {
-          shouldValidate: true,
-        });
-      }
+          {/* Subscription URL */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Subscription URL <span className="text-red-500">*</span>
+            </label>
 
-      if (raw.length >= 15) trigger("subsc_price");
-    }}
-    className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
-    placeholder="Enter price"
-  />
+            <input
+              type="text"
+              {...register("subc_url", {
+                required: "Subscription URL is required",
+                maxLength: {
+                  value: 200,
+                  message: "Max 200 characters allowed",
+                },
+                validate: (v) =>
+                  (v?.trim().length ?? 0) > 0 || "URL cannot start with spaces",
+                pattern: {
+                  value: urlRegex,
+                  message:
+                    "Enter a valid URL (must start with http:// or https://)",
+                },
+              })}
+              onBlur={() => trigger("subc_url")}
+              onChange={(e) => {
+                let v = e.target.value;
 
-  {errors.subsc_price && (
-    <p className="text-red-500 text-sm mt-1">{errors.subsc_price.message}</p>
-  )}
+                // Prevent leading spaces
+                if (v.startsWith(" ")) {
+                  v = v.trimStart();
+                  toast.error("URL cannot start with a space");
+                }
 
-  <p
-    className={`text-sm mt-1 ${
-      String(watch("subsc_price") ?? "").length >= 15
-        ? "text-red-500"
-        : "text-gray-500"
-    }`}
-  >
-    {String(watch("subsc_price") ?? "").length}/15 characters
-    {String(watch("subsc_price") ?? "").length >= 15 && " — maximum reached"}
-  </p>
-</div>
+                // Limit max length
+                if (v.length > 200) v = v.slice(0, 200);
+
+                setValue("subc_url", v, { shouldValidate: true });
+              }}
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.subc_url ? "border-red-500" : ""
+              }`}
+              placeholder="Enter subscription URL"
+            />
+
+            {errors.subc_url && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.subc_url.message}
+              </p>
+            )}
+          </div>
+
+          {/* Subscription Price */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Price <span className="text-red-500">*</span>
+            </label>
+
+            <input
+              type="number"
+              step="0.01"
+              {...register("subsc_price", {
+                required: "Price is required",
+                max: {
+                  value: 999999999999999,
+                  message: "Max 15 digits allowed",
+                },
+              })}
+              onBlur={() => trigger("subsc_price")}
+              onInput={(e: React.FormEvent<HTMLInputElement>) => {
+                const input = e.currentTarget;
+                const raw = input.value;
+
+                if (raw.length > 15) {
+                  const truncated = raw.slice(0, 15);
+                  input.value = truncated;
+                  // ✅ type-safe setValue call
+                  setValue(
+                    "subsc_price",
+                    truncated === "" ? 0 : Number(truncated),
+                    {
+                      shouldValidate: true,
+                    }
+                  );
+                } else {
+                  setValue("subsc_price", raw === "" ? 0 : Number(raw), {
+                    shouldValidate: true,
+                  });
+                }
+
+                if (raw.length >= 15) trigger("subsc_price");
+              }}
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.subsc_price ? "border-red-500" : ""
+              }`}
+              placeholder="Enter price"
+            />
+
+            {errors.subsc_price && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.subsc_price.message}
+              </p>
+            )}
+          </div>
 
           {/* Currency */}
           <div>
@@ -299,7 +438,9 @@ const portalDetail = watch("portal_detail") || "";
                 required: "Currency is required",
               })}
               onBlur={() => trigger("subsc_currency")}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.subsc_currency ? "border-red-500" : ""
+              }`}
             >
               <option value="">Select Currency</option>
               <option value="USD">USD – US Dollar</option>
@@ -327,7 +468,9 @@ const portalDetail = watch("portal_detail") || "";
             <select
               {...register("subsc_type", { required: "Type is required" })}
               onBlur={() => trigger("subsc_type")}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.subsc_type ? "border-red-500" : ""
+              }`}
             >
               <option value="">Select Type</option>
               <option value="Monthly">Monthly</option>
@@ -352,7 +495,9 @@ const portalDetail = watch("portal_detail") || "";
                 required: "Purchase date is required",
               })}
               onBlur={() => trigger("purchase_date")}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.purchase_date ? "border-red-500" : ""
+              }`}
             />
             {errors.purchase_date && (
               <p className="text-red-500 text-sm mt-1">
@@ -373,7 +518,9 @@ const portalDetail = watch("portal_detail") || "";
                   watchedType === "Lifetime" ? false : "Renew date is required",
               })}
               disabled={watchedType === "Lifetime"}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 disabled:opacity-60"
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 disabled:opacity-60 ${
+                errors.renew_date ? "border-red-500" : ""
+              }`}
             />
             {errors.renew_date && (
               <p className="text-red-500 text-sm mt-1">
@@ -382,47 +529,55 @@ const portalDetail = watch("portal_detail") || "";
             )}
           </div>
 
-        {/* Payment Method */}
-<div>
-  <label className="block text-sm font-medium text-gray-700">
-    Payment Method <span className="text-red-500">*</span>
-  </label>
+          {/* Payment Method */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Payment Method <span className="text-red-500">*</span>
+            </label>
 
-  <textarea
-    {...register("payment_method", {
-      required: "Payment method is required",
-      maxLength: { value: 50, message: "Max 50 characters allowed" },
-    })}
-    onBlur={() => trigger("payment_method")}
-    rows={3}
-    maxLength={50}
-    onChange={(e) => {
-      const v = e.target.value;
-      if (v.length <= 50) {
-        setValue("payment_method", v);
-      } else {
-        setValue("payment_method", v.slice(0, 50));
-      }
-      if (v.length >= 50) trigger("payment_method");
-    }}
-    className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
-    placeholder="Enter payment method details"
-  />
+            <textarea
+              {...register("payment_method", {
+                required: "Payment method is required",
+                minLength: {
+                  value: 5,
+                  message: "Minimum 5 characters required",
+                },
+                maxLength: { value: 50, message: "Max 50 characters allowed" },
+                validate: (v) =>
+                  v.trim().length > 0 ||
+                  "Payment method cannot start with spaces",
+              })}
+              onBlur={() => trigger("payment_method")}
+              rows={3}
+              maxLength={50}
+              onChange={(e) => {
+                let v = e.target.value;
 
-  {errors.payment_method && (
-    <p className="text-red-500 text-sm mt-1">{errors.payment_method.message}</p>
-  )}
+                // Prevent leading spaces
+                if (v.startsWith(" ")) {
+                  v = v.trimStart();
+                  toast.error("Payment method cannot start with a space");
+                }
 
-  <p
-    className={`text-sm mt-1 ${
-      watch("payment_method", "").length >= 50 ? "text-red-500" : "text-gray-500"
-    }`}
-  >
-    {watch("payment_method", "").length}/50 characters
-    {watch("payment_method", "").length >= 50 && " — maximum reached"}
-  </p>
-</div>
+                if (v.length <= 50) {
+                  setValue("payment_method", v);
+                } else {
+                  setValue("payment_method", v.slice(0, 50));
+                }
+                trigger("payment_method");
+              }}
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.payment_method ? "border-red-500" : ""
+              }`}
+              placeholder="Enter payment method (ex: mobile payments, UPI, QR codes, and bank transfers etc)"
+            />
 
+            {errors.payment_method && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.payment_method.message}
+              </p>
+            )}
+          </div>
 
           {/* Department */}
           <div className="mb-10">
@@ -435,7 +590,9 @@ const portalDetail = watch("portal_detail") || "";
                 valueAsNumber: true,
               })}
               onBlur={() => trigger("department_id")}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.department_id ? "border-red-500" : ""
+              }`}
             >
               <option value="">Select Department</option>
               {departments.map((d) => (
@@ -458,7 +615,9 @@ const portalDetail = watch("portal_detail") || "";
             </label>
             <select
               {...register("subsc_status", { required: "Status is required" })}
-              className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.subsc_status ? "border-red-500" : ""
+              }`}
             >
               <option value="">Select Status</option>
               <option value="active">Active</option>
@@ -471,48 +630,76 @@ const portalDetail = watch("portal_detail") || "";
             )}
           </div>
 
-        {/* Portal Details */}
-<div className="md:col-span-2">
-  <label className="block text-sm font-medium text-gray-700">
-    Portal Details <span className="text-red-500">*</span>
-  </label>
+          {/* Portal Details */}
+          {/* Portal Details */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Portal Details <span className="text-red-500">*</span>
+            </label>
 
-  <textarea
-    {...register("portal_detail", {
-      required: "Portal details are required",
-      maxLength: { value: 120, message: "Max 120 characters allowed" },
-    })}
-    onBlur={() => trigger("portal_detail")}
-    rows={3}
-    maxLength={120}
-    onChange={(e) => {
-      const v = e.target.value;
-      if (v.length <= 120) {
-        setValue("portal_detail", v);
-      } else {
-        setValue("portal_detail", v.slice(0, 120));
-      }
-      if (v.length >= 120) trigger("portal_detail");
-    }}
-    className="border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400"
-    placeholder="Enter portal details or notes"
-  ></textarea>
+            <textarea
+              {...register("portal_detail", {
+                required: "Portal details are required",
+                minLength: {
+                  value: 5,
+                  message: "Minimum 5 characters required",
+                },
+                maxLength: {
+                  value: 120,
+                  message: "Max 120 characters allowed",
+                },
+                validate: (v) =>
+                  (v?.trim().length ?? 0) > 0 ||
+                  "Portal details cannot start with spaces",
+              })}
+              onBlur={() => trigger("portal_detail")}
+              rows={3}
+              maxLength={120}
+              onChange={(e) => {
+                let v: string = e.target.value || "";
 
-  {errors.portal_detail && (
-    <p className="text-red-500 text-sm mt-1">{errors.portal_detail.message}</p>
-  )}
+                // Prevent leading spaces
+                if (v.startsWith(" ")) {
+                  v = v.trimStart();
+                  toast.error("Portal details cannot start with a space");
+                }
 
-  <p
-    className={`text-sm mt-1 ${
-      portalDetail.length >= 120 ? "text-red-500" : "text-gray-500"
-    }`}
-  >
-   {portalDetail.length}/120 characters
-  {portalDetail.length >= 120 && " — maximum reached"}
-  </p>
-</div>
+                if (v.length <= 120) {
+                  setValue("portal_detail", v);
+                } else {
+                  setValue("portal_detail", v.slice(0, 120));
+                }
+
+                if (v.length >= 120) trigger("portal_detail");
+              }}
+              className={`border rounded-md px-3 py-2 mt-1 w-full focus:ring-2 focus:ring-blue-400 ${
+                errors.portal_detail ? "border-red-500" : ""
+              }`}
+              placeholder="Enter portal details or notes"
+            ></textarea>
+
+            {errors.portal_detail && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.portal_detail.message}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex justify-end mt-6">
+
+        <div className="flex justify-end mt-6 gap-3">
+          {/* Cancel button - non-submitting, navigates back to list */}
+          <button
+            type="button"
+            onClick={() => nav("/subscription")}
+            disabled={isSubmitting}
+            className={`px-6 cursor-pointer py-2 rounded border border-gray-300 hover:bg-gray-100 transition ${
+              isSubmitting ? "opacity-50 cursor-not-allowed" : "text-gray-700"
+            }`}
+          >
+            Cancel
+          </button>
+
+          {/* Submit button */}
           <button
             type="submit"
             disabled={isSubmitting}

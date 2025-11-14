@@ -38,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({ title, right }) => {
               </button>
               <button
                 onClick={() => handleLogoutConfirmed(onClose)}
-                className="px-5 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 "
+                className="px-5 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 cursor-pointer"
               >
                 Logout
               </button>

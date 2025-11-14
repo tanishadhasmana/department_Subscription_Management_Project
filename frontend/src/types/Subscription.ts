@@ -18,4 +18,6 @@ export interface Subscription {
   deleted_at?: string;
   updated_by?: number;
   deleted_by?: number;
+  subc_url?: string;
+
 }

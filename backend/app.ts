@@ -4,15 +4,18 @@ import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import path from "path";
+// import path from "path";
 import cookieParser from "cookie-parser";
 
 import dashboardRoute from "./src/routes/dashboardRoute";
 import userRoute from "./src/routes/userRoutes";
 import subscriptionRoute from "./src/routes/subscriptionRoutes";
 import departmentRoute from "./src/routes/departmentRoutes";
+import passwordRoute from "./src/routes/passwordRoutes";
 
-// ✅ Import cron job starter
+
+
+//  Import cron job starter
 import { startSubscriptionReminderCron } from "./src/crons/subscriptionReminderCron";
 import { testEmailConnection } from "./src/utils/mailer";
 
@@ -51,16 +54,16 @@ app.use(
 /* ---------------------------
    🧱 Static Files
 ---------------------------- */
-app.use(
-  "/assets/images",
-  express.static(path.resolve(__dirname, "assets/images"))
-);
+// app.use(
+//   "/assets/images",
+//   express.static(path.resolve(__dirname, "assets/images"))
+// );
 
 /* ---------------------------
    🧱 Rate Limiter
 ---------------------------- */
 const authLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: 60 * 1000, // 1 minute
   max: 10,
   message: "Too many requests, please try again later.",
 });
@@ -79,14 +82,15 @@ app.use("/api/dashboard", dashboardRoute);
 app.use("/api/users", userRoute);
 app.use("/api/departments", departmentRoute);
 app.use("/api/subscriptions", subscriptionRoute);
+app.use("/api/password", passwordRoute);
 
 /* ---------------------------
-   🚀 Start Server & Initialize Cron
+    Start Server & Initialize Cron
 ---------------------------- */
 const PORT = process.env.PORT || 3002;
 
 app.listen(PORT, async () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
   
   // ✅ Test email connection on startup
   console.log("\n📧 Testing email connection...");

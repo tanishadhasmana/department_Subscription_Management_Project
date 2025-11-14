@@ -29,6 +29,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
 // ----------------------------
 export const resetPassword = async (req: Request, res: Response) => {
   const { token, newPassword } = req.body;
+  
   if (!token || !newPassword)
     return res
       .status(400)

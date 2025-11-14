@@ -4,21 +4,19 @@ import { encrypt, decrypt } from "../utils/cryptoHashing";
  * Get total subscription count
  */
 export const getSubscriptionsCountService = async (): Promise<number> => {
-  const result = await db("subscriptions").count<{ total: number }>("id as total");
+  const result = await db("subscriptions").count<{ total: number }>(
+    "id as total"
+  );
   return Number(result?.[0]?.total ?? 0);
 };
 
-/**
- * Get all subscriptions (with pagination, search, sorting, and status filter)
- */
+
 export const getAllSubscriptionsService = async (
   page: number,
   limit: number,
-  search: string,
-  status: string,
+  filters: Record<string, string | undefined>,
   sortBy?: string,
-  sortOrder: "asc" | "desc" = "desc",
-  column: string = "subsc_name"
+  sortOrder: "asc" | "desc" = "desc"
 ) => {
   const offset = (page - 1) * limit;
 
@@ -27,28 +25,62 @@ export const getAllSubscriptionsService = async (
       .leftJoin("departments as d", "s.department_id", "d.id")
       .whereNull("s.deleted_at");
 
-    if (status && status !== "all") {
-      baseQuery = baseQuery.andWhereRaw("LOWER(s.subsc_status) = ?", [status.toLowerCase()]);
-    }
+    // ✅ Apply filters dynamically (AND condition)
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value && value.trim() !== "") {
+        const val = value.toLowerCase();
 
-    if (search && column) {
-      const columnMap: Record<string, string> = {
-        subsc_name: "s.subsc_name",
-        subsc_type: "s.subsc_type",
-        subsc_price: "s.subsc_price",
-        subsc_currency: "s.subsc_currency",
-        department_name: "d.deptName",
-        subsc_status: "s.subsc_status",
-      };
-      const col = columnMap[column] || "s.subsc_name";
-      if (col === "s.subsc_status") {
-        baseQuery = baseQuery.andWhereRaw(`${col} = ?`, [search.toLowerCase()]);
-      } else {
-        baseQuery = baseQuery.andWhereRaw(`LOWER(${col}) LIKE ?`, [`%${search.toLowerCase()}%`]);
+        switch (key) {
+          case "subsc_name":
+          case "subsc_type":
+          case "subsc_currency":
+            baseQuery = baseQuery.andWhereRaw(`LOWER(s.${key}) LIKE ?`, [
+              `%${val}%`,
+            ]);
+            break;
+
+          case "subsc_price":
+            baseQuery = baseQuery.andWhereRaw(
+              `CAST(s.subsc_price AS CHAR) LIKE ?`,
+              [`%${value}%`]
+            );
+            break;
+
+          case "department_name":
+            baseQuery = baseQuery.andWhereRaw(`LOWER(d.deptName) LIKE ?`, [
+              `%${val}%`,
+            ]);
+            break;
+
+          case "subsc_status":
+            baseQuery = baseQuery.andWhereRaw(`LOWER(s.subsc_status) = ?`, [
+              val,
+            ]);
+            break;
+        }
       }
+    });
+
+    // ✅ Sorting
+    const ALLOWED_SORTS: Record<string, string> = {
+      id: "s.id",
+      subsc_name: "s.subsc_name",
+      subsc_type: "s.subsc_type",
+      subsc_price: "s.subsc_price",
+      subsc_currency: "s.subsc_currency",
+      subsc_status: "s.subsc_status",
+      department_name: "d.deptName",
+      created_at: "s.created_at",
+    };
+
+    if (sortBy && ALLOWED_SORTS[sortBy]) {
+      baseQuery = baseQuery.orderBy(ALLOWED_SORTS[sortBy], sortOrder);
+    } else {
+      baseQuery = baseQuery.orderBy("s.created_at", "desc");
     }
 
-    const rowsQuery = baseQuery
+    // ✅ Get paginated results
+    const data = await baseQuery
       .clone()
       .select(
         "s.id",
@@ -62,39 +94,30 @@ export const getAllSubscriptionsService = async (
         "s.portal_detail",
         "s.payment_method",
         "d.deptName as department_name"
-      );
+      )
+      .limit(limit)
+      .offset(offset);
 
-    const ALLOWED_SORTS: Record<string, string> = {
-      id: "s.id",
-      subsc_name: "s.subsc_name",
-      subsc_type: "s.subsc_type",
-      subsc_price: "s.subsc_price",
-      subsc_currency: "s.subsc_currency",
-      subsc_status: "s.subsc_status",
-      department_name: "d.deptName",
-      created_at: "s.created_at",
-    };
-
-    if (sortBy && ALLOWED_SORTS[sortBy]) {
-      rowsQuery.orderBy(ALLOWED_SORTS[sortBy], sortOrder);
-    } else {
-      rowsQuery.orderBy("s.created_at", "desc");
-    }
-
-    const data = await rowsQuery.limit(limit).offset(offset);
-
-    // ✅ Decrypt before returning
+    // ✅ Decrypt sensitive data if needed
     const decryptedData = data.map((item) => ({
       ...item,
       portal_detail: item.portal_detail ? decrypt(item.portal_detail) : null,
       payment_method: item.payment_method ? decrypt(item.payment_method) : null,
     }));
 
-    const countResult = await baseQuery.clone().count<{ total: number }>("s.id as total");
+    // ✅ Count total records for pagination
+    const countResult = await baseQuery
+      .clone()
+      .count<{ total: number }>("s.id as total");
     const total = Number(countResult?.[0]?.total ?? 0);
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
-    return { subscriptions: decryptedData, total, totalPages, currentPage: page };
+    return {
+      subscriptions: decryptedData,
+      total,
+      totalPages,
+      currentPage: page,
+    };
   } catch (err: any) {
     console.error("getAllSubscriptionsService error:", err);
     throw err;
@@ -107,6 +130,7 @@ export const getAllSubscriptionsService = async (
 export const exportSubscriptionsCSVService = async () => {
   const subscriptions = await db("subscriptions")
     .leftJoin("departments", "subscriptions.department_id", "departments.id")
+    .whereNull("subscriptions.deleted_at")
     .select(
       "subscriptions.id",
       "subscriptions.subsc_name",
@@ -118,7 +142,16 @@ export const exportSubscriptionsCSVService = async () => {
       "subscriptions.subsc_status"
     );
 
-  const headers = ["ID", "Name", "Type", "Price", "Currency", "Renew Date", "Department", "Status"];
+  const headers = [
+    "ID",
+    "Name",
+    "Type",
+    "Price",
+    "Currency",
+    "Renew Date",
+    "Department",
+    "Status",
+  ];
   const rows = subscriptions.map((s) => [
     s.id,
     s.subsc_name,
@@ -157,7 +190,8 @@ export const getSubscriptionByIdService = async (id: number) => {
       "s.department_id",
       "d.deptName as department_name",
       "s.created_at",
-      "s.updated_at"
+      "s.updated_at",
+      "s.subc_url"
     )
     .where("s.id", id)
     .first();
@@ -171,16 +205,37 @@ export const getSubscriptionByIdService = async (id: number) => {
   };
 };
 
-
 /**
  * Create a new subscription
  */
+
+
 export const createSubscriptionService = async (data: any) => {
+
+
+
+
+  const existing = await db("subscriptions")
+  .where({
+    subsc_name: data.subsc_name,
+    department_id: data.department_id,
+  })
+  .whereNull("deleted_at")
+  .first();
+
+if (existing) {
+  throw new Error("Subscription with same name already exists for this department.");
+}
+
+
+
+
   const insertData = {
     subsc_name: data.subsc_name,
     subsc_type: data.subsc_type,
     subsc_price: data.subsc_price,
     subsc_currency: data.subsc_currency || "USD",
+    subc_url: data.subc_url || null,
     renew_date: data.renew_date || null,
     portal_detail: data.portal_detail ? encrypt(data.portal_detail) : null,
     payment_method: data.payment_method ? encrypt(data.payment_method) : null,
@@ -219,7 +274,6 @@ export const createSubscriptionService = async (data: any) => {
   };
 };
 
-
 /**
  * Update existing subscription
  */
@@ -228,6 +282,7 @@ export const updateSubscriptionService = async (id: number, data: any) => {
     subsc_name: data.subsc_name,
     subsc_type: data.subsc_type,
     subsc_price: data.subsc_price,
+    subc_url: data.subc_url || null,
     subsc_currency: data.subsc_currency,
     renew_date: data.renew_date || null,
     portal_detail: data.portal_detail ? encrypt(data.portal_detail) : null,
@@ -271,7 +326,10 @@ export const updateSubscriptionService = async (id: number, data: any) => {
 /**
  * Update subscription status only
  */
-export const updateSubscriptionStatusService = async (id: number, status: string) => {
+export const updateSubscriptionStatusService = async (
+  id: number,
+  status: string
+) => {
   await db("subscriptions").where({ id }).update({
     subsc_status: status,
     updated_at: db.fn.now(),
@@ -293,7 +351,10 @@ export const updateSubscriptionStatusService = async (id: number, status: string
 /**
  * Soft delete subscription
  */
-export const deleteSubscriptionService = async (id: number, performedById: number) => {
+export const deleteSubscriptionService = async (
+  id: number,
+  performedById: number
+) => {
   const result = await db("subscriptions").where({ id }).update({
     deleted_at: db.fn.now(),
     deleted_by: performedById,
@@ -303,4 +364,3 @@ export const deleteSubscriptionService = async (id: number, performedById: numbe
 
   return result > 0;
 };
-

@@ -48,6 +48,7 @@ interface EmailData {
   currency: string;
   expiryDate: string;
   daysRemaining: number;
+  url: string;
 }
 
 // // ✅ Function to generate HTML for expiry emails
@@ -133,7 +134,7 @@ interface EmailData {
 
 
 const generateExpiryEmailHTML = (data: EmailData): string => {
-  const { subscriptionName, departmentName, price, currency, expiryDate, daysRemaining } = data;
+  const { subscriptionName, departmentName, price, currency, expiryDate, daysRemaining, url } = data;
 
   return `
 <!DOCTYPE html>
@@ -353,8 +354,8 @@ const generateExpiryEmailHTML = (data: EmailData): string => {
       </div>
 
       <div class="cta">
-        <a href="http://localhost:5173/subscription">Renew Subscription Now</a>
-      </div>
+      <a href="${url}" target="_blank">Renew Subscription Now</a>
+    </div>
 
       <div class="warning">
         <strong>⚡ Important:</strong>

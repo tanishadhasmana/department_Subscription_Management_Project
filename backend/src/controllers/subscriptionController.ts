@@ -34,28 +34,29 @@ export const getSubscriptionsCount = async (req: Request, res: Response) => {
   }
 };
 
-// ----------------------------
-// Get All Subscriptions (with search, filter, pagination)
-// ----------------------------
 export const getAllSubscriptions = async (req: Request, res: Response) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
-    const search = (req.query.search as string) || "";
-    const column = (req.query.column as string) || "subsc_name";
-
-    const status = (req.query.status as string) || "all";
     const sortBy = (req.query.sortBy as string) || undefined;
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || "desc";
+
+    // ✅ Collect all possible filters dynamically
+    const filters = {
+      subsc_name: req.query.subsc_name as string,
+      subsc_type: req.query.subsc_type as string,
+      subsc_price: req.query.subsc_price as string,
+      subsc_currency: req.query.subsc_currency as string,
+      department_name: req.query.department_name as string,
+      subsc_status: req.query.subsc_status as string,
+    };
 
     const result = await getAllSubscriptionsService(
       page,
       limit,
-      search,
-      status,
+      filters,
       sortBy,
-      sortOrder,
-      column
+      sortOrder
     );
 
     return res.status(200).json({
@@ -72,6 +73,10 @@ export const getAllSubscriptions = async (req: Request, res: Response) => {
     });
   }
 };
+
+
+
+
 
 // ----------------------------
 // Get Subscription by ID
@@ -156,10 +161,15 @@ export const createSubscription = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Create subscription error:", error);
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
-      message: responseMessage.error("creating subscription"),
-      error: error.message,
+      // message: responseMessage.error("creating subscription"),
+      // error: error.message,
+
+
+      // message: "Subscription for this department already exists",
+
+      message: error.message || "Failed to create subscription", 
     });
   }
 };
