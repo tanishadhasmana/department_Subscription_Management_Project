@@ -6,13 +6,12 @@ import { Toaster } from "react-hot-toast";
 
 const App = () => (
   // wreapped with that, like for authentication like logged in user, session managemenet etc.
-  <AuthProvider>
-    <BrowserRouter>
+  <BrowserRouter>
+    <AuthProvider>
       <AppRouter />
-      
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-    </BrowserRouter>
-  </AuthProvider>
+    </AuthProvider>
+  </BrowserRouter>
 );
 
 export default App;

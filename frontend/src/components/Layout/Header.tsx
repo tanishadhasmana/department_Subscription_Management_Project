@@ -2,7 +2,7 @@ import React from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { confirmAlert } from "react-confirm-alert";
 import toast from "react-hot-toast";
-import { Building2 } from "lucide-react"; // Logo icon
+import { Building2 } from "lucide-react";
 
 interface HeaderProps {
   title?: string;
@@ -50,32 +50,36 @@ const Header: React.FC<HeaderProps> = ({ title, right }) => {
   };
 
   return (
-    <header className="w-full bg-white shadow p-4 flex justify-between items-center sticky top-0 z-40">
+    <header className="w-full bg-white shadow-md border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
       {/* Left Section — Logo + Title */}
-      <div className="flex items-center gap-3">
-        {/* Logo */}
-        <div className="bg-blue-600 p-2 rounded-lg flex items-center justify-center shadow">
-          <Building2 size={22} className="text-white" />
+      <div className="flex items-center gap-4">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-2.5 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <Building2 size={24} className="text-white" />
         </div>
-        <h1 className="text-xl font-semibold tracking-wide text-gray-800">
-          DSM
-        </h1>
-
-        {/* Optional dynamic page title */}
-        {title && (
-          <h2 className="text-lg font-medium text-gray-700 ml-4">{title}</h2>
-        )}
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            DSM
+          </h1>
+          {title && (
+            <p className="text-sm text-gray-600 mt-0.5">{title}</p>
+          )}
+        </div>
       </div>
 
       {/* Right Section — User Info + Logout */}
       <div className="flex items-center gap-4">
         {right}
-        <span className="text-gray-700">
-          Welcome, {user?.first_name }
-        </span>
+        <div className="text-right">
+          <p className="text-sm font-semibold text-gray-900">
+            Welcome, {user?.first_name || "User"}
+          </p>
+          <p className="text-xs text-gray-600">
+            {user?.role_name || "Member"}
+          </p>
+        </div>
         <button
           onClick={confirmLogout}
-          className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition cursor-pointer"
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium cursor-pointer"
         >
           Logout
         </button>
@@ -88,18 +92,20 @@ export default Header;
 
 
 
+
+
+
 // import React from "react";
 // import { useAuth } from "../../hooks/useAuth";
 // import { confirmAlert } from "react-confirm-alert";
 // import toast from "react-hot-toast";
+// import { Building2 } from "lucide-react"; // Logo icon
 
 // interface HeaderProps {
 //   title?: string;
 //   right?: React.ReactNode;
 // }
 
-// // const Header: React.FC = () => {
-// //   const { user, logout } = useAuth();
 // const Header: React.FC<HeaderProps> = ({ title, right }) => {
 //   const { user, logout } = useAuth();
 
@@ -141,15 +147,40 @@ export default Header;
 //   };
 
 //   return (
-//     <header className="w-full bg-white shadow p-4 flex justify-between items-center">
-//       <div>{title && <h2 className="text-xl font-semibold">{title}</h2>}</div>
+//     <header className="w-full bg-white shadow p-4 flex justify-between items-center sticky top-0 z-40">
+//       {/* Left Section — Logo + Title */}
+//       <div className="flex items-center gap-3">
+//         {/* Logo */}
+//         <div className="bg-blue-600 p-2 rounded-lg flex items-center justify-center shadow">
+//           <Building2 size={22} className="text-white" />
+//         </div>
+//         <h1 className="text-xl font-semibold tracking-wide text-gray-800">
+//           DSM
+//         </h1>
+
+//         {/* Optional dynamic page title */}
+//         {title && (
+//           <h2 className="text-lg font-medium text-gray-700 ml-4">{title}</h2>
+//         )}
+//       </div>
+
+//       {/* Right Section — User Info + Logout */}
 //       <div className="flex items-center gap-4">
 //         {right}
-//         <span>Welcome, {user?.firstName || "Admin"}</span>
-//         <button onClick={confirmLogout}>Logout</button>
+//         <span className="text-gray-700">
+//           Welcome, {user?.first_name }
+//         </span>
+//         <button
+//           onClick={confirmLogout}
+//           className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition cursor-pointer"
+//         >
+//           Logout
+//         </button>
 //       </div>
 //     </header>
 //   );
 // };
 
 // export default Header;
+
+
