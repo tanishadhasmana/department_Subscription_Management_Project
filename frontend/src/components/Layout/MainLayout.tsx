@@ -20,7 +20,7 @@ const MainLayout = () => {
           sidebarOpen ? "ml-64" : "ml-20"
         }`}
       >
-        {/* Header no longer needs props */}
+        {/* Header */}
         <Header />
 
         <main className="p-6 flex-1 overflow-y-auto">

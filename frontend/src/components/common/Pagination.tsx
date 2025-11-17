@@ -4,9 +4,9 @@ import React from "react";
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  onPageChange: (page: number) => void;
-  limit: number;
-  onLimitChange: (limit: number) => void;
+  onPageChange: (page: number) => void; //fucn to change page
+  limit: number;  // Items per page (5/10/20/50)
+  onLimitChange: (limit: number) => void; //fucn to change limit
 }
 
 const Pagination: React.FC<PaginationProps> = ({

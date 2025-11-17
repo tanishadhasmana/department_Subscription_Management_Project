@@ -1,21 +1,35 @@
+// backend/src/controllers/dashboardController.ts
 import { Request, Response } from "express";
-import { getDepartmentWiseSubscriptionsService } from "../services/dashboardService";
+import { getDashboardMetricsService } from "../services/dashboardService";
 import { responseMessage } from "../utils/responseMessage";
 
-export const getDepartmentWiseSubscriptions = async (req: Request, res: Response) => {
+export const getDashboardMetrics = async (req: Request, res: Response) => {
   try {
-    const data = await getDepartmentWiseSubscriptionsService();
+    const { startDate, endDate, departments, subscriptionType, status } = req.query;
+    
+    const filters = {
+      startDate: startDate as string,
+      endDate: endDate as string,
+      // if multiple depts as, "1,2,3" like that split into array as ["1","2","3"]
+      departments: departments ? (departments as string).split(',') : undefined,
+      subscriptionType: subscriptionType as string,
+      status: status as string,
+    };
+// Fetch metrics from service, which returns filtered data
+    const metrics = await getDashboardMetricsService(filters);
+    
     res.status(200).json({
       success: true,
-      message: responseMessage.fetched("Department-wise subscriptions"),
-      data,
+     message: responseMessage.fetched("Dashboard metrics"),
+      data: metrics,
     });
-  } catch (error: any) {
-    console.error("Dashboard Error:", error.message);
-    res.status(500).json({
+  } catch (err: any) {
+    console.error("Failed to fetch dashboard metrics:", err);
+    res.status(500).json({ 
       success: false,
-      message: responseMessage.error("dashboard data"),
-      error: error.message,
+      message: err.message || responseMessage.error("Dashboard metrics")
+
     });
   }
 };
+

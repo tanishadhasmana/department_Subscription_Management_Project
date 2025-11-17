@@ -1,3 +1,4 @@
+// auth context
 // src/contexts/AuthContext.tsx
 import { createContext } from "react";
 import type { User } from "../types/User";
@@ -8,10 +9,10 @@ export interface AuthContextType {
   login: (user: User) => void;
   logout: () => Promise<void>;
   loading: boolean;
-  isAuthenticated: boolean;  // ← ADD THIS
-  hasPermission: (permissionName: string) => boolean;  // ← ADD THIS
+  isAuthenticated: boolean; 
+  hasPermission: (permissionName: string) => boolean; 
 }
-
+// create global storage, contrxt doesnt hold data by itself, it defines what data exists in the context
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 

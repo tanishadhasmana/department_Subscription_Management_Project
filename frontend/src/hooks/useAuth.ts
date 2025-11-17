@@ -1,6 +1,6 @@
 // src/hooks/useAuth.ts
 import { useContext } from "react";
-import { AuthContext } from "../context/AuthContext";  // ← Fixed: contexts (plural)
+import { AuthContext } from "../context/AuthContext";  
 import type { AuthContextType } from "../context/AuthContext";
 
 export const useAuth = (): AuthContextType => {
@@ -8,6 +8,7 @@ export const useAuth = (): AuthContextType => {
   if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
+
 
 
 
