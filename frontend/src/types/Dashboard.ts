@@ -11,7 +11,7 @@ export interface Option {
 
 export interface KPIItem {
   value: number;
-  percentage?: number; 
+  percentage?: number | null; 
   trend?: "up" | "down";
 }
 
@@ -28,6 +28,8 @@ export interface DeptSpendItem {
   department_name: string;
   total_spend: number;
   percentage: number;
+  // instead of dept name, total spend, percentage we can have other values of type string, number, so now with dept name:'HR', total_spend: 5000, percentage: 25, we can have other dynamic keys too like jan :1000 etc
+  [key: string]: string | number;
 }
 
 export interface StatusOverviewSource {
@@ -38,6 +40,7 @@ export interface StatusOverviewSource {
 
 export type AggregatedStatus = {
   department_name: string;
+  // instead of status we can have any other name, but work is same as above key,like to hold dynamic values, like suppose we have active: 10, inactive:5 etc pending:2 etc
   [status: string]: number | string; 
 };
 

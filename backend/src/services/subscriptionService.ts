@@ -152,16 +152,27 @@ export const exportSubscriptionsCSVService = async () => {
     "Department",
     "Status",
   ];
-  const rows = subscriptions.map((s) => [
-    s.id,
-    s.subsc_name,
-    s.subsc_type,
-    s.subsc_price,
-    s.subsc_currency,
-    s.renew_date || "-",
-    s.department_name || "-",
-    s.subsc_status,
-  ]);
+  // const rows = subscriptions.map((s) => [
+  //   s.id,
+  //   s.subsc_name,
+  //   s.subsc_type,
+  //   s.subsc_price,
+  //   s.subsc_currency,
+  //   s.renew_date || "-",
+  //   s.department_name || "-",
+  //   s.subsc_status,
+  // ]);
+const rows = subscriptions.map((s, index) => [
+  index + 1, //so in the exported csv i always get inc numebers.
+  s.subsc_name,
+  s.subsc_type,
+  s.subsc_price,
+  s.subsc_currency,
+  s.renew_date || "-",
+  s.department_name || "-",
+  s.subsc_status,
+]);
+
 
   const csvContent = [headers, ...rows]
     .map((row) => row.map((v) => `"${v}"`).join(","))
