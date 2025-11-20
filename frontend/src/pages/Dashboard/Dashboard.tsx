@@ -102,6 +102,8 @@ const Dashboard: React.FC = () => {
 
       const data = await getDashboardMetrics(filters);
       setMetrics(data);
+      console.log("🔎 Upcoming Renewals:", data.charts?.upcomingRenewals);
+      console.log("🔎 Full Dashboard Response:", data);
     } catch (err: unknown) {
       console.error("Failed to fetch metrics:", err);
       toast.error("Failed to load dashboard metrics");
@@ -112,23 +114,21 @@ const Dashboard: React.FC = () => {
 
   // date formating fucntion
   const formatDateTime = (isoString: string): string => {
-    // creates js date obj of iso
-    const date = new Date(isoString);
-    // get day return day of month (1-31), 02 ensure 2 chars like 01,09 etc
-    const day = date.getDate().toString().padStart(2, "0");
-    // month as 0-11, so +1, pad to 2 chars
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    // return full year in number.
-    const year = date.getFullYear();
-    // get hours 0-23
-    let hours = date.getHours();
-    // get minutes 0-59, pad to 2 chars
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    // determine AM/PM
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12; // Convert 0 → 12
+    if (!isoString) return "";
 
-    return `${day}-${month}-${year}, ${hours}:${minutes} ${ampm}`;
+    // try to create a Date. If invalid, return the original string
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+      // sometimes backend already returns 'YYYY-MM-DD' or other formats.
+      // if Date parsing fails, return the input as-is (safer than "Invalid Date")
+      return String(isoString);
+    }
+
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${day}-${month}-${year}`;
   };
 
   // Runs once on mount to fetch departments and metrics
@@ -425,33 +425,77 @@ const Dashboard: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">
             Department-wise Spend Distribution
           </h3>
+
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
+              {/* a pie chart become the donut chart by simply adding the inner radius,inner for size of hole, outer for size of pie */}
+              {/* Donut Pie */}
               <Pie
                 data={charts.departmentSpendDistribution}
                 cx="50%"
                 cy="50%"
+                startAngle={90}
+                endAngle={-270}
+                innerRadius={70}
+                outerRadius={110}
                 labelLine={false}
-                label={(entry) => {
-                  const item = entry as unknown as DeptSpendItem;
+                dataKey="total_spend"
+                // 👉 Correct typed label
+                label={(props) => {
+                  const item = props.payload as DeptSpendItem;
+
+                  if (!item || item.percentage < 3) return "";
                   return `${item.department_name} (${item.percentage.toFixed(
                     1
                   )}%)`;
                 }}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="total_spend"
+                isAnimationActive={true}
+                animationDuration={800}
               >
-                {charts.departmentSpendDistribution.map((_, index: number) => (
+                {charts.departmentSpendDistribution.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={COLORS[index % COLORS.length]}
                   />
                 ))}
               </Pie>
+
               <Tooltip
                 formatter={(value: number) => `₹${value.toLocaleString()}`}
               />
+
+              {/* Center label: total spend */}
+              <text
+                x="50%"
+                y="50%"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="text-sm"
+                style={{ fontSize: 14, fontWeight: 600, pointerEvents: "none" }}
+              >
+                {`₹ ${(
+                  kpis?.totalSpend?.value ??
+                  charts.departmentSpendDistribution.reduce(
+                    (sum: number, item: DeptSpendItem) =>
+                      sum + (item.total_spend || 0),
+                    0
+                  )
+                ).toLocaleString()}`}
+              </text>
+
+              <text
+                x="50%"
+                y="50%"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                style={{
+                  fontSize: 11,
+                  transform: "translateY(18px)",
+                  pointerEvents: "none",
+                }}
+              >
+                Total
+              </text>
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -470,7 +514,11 @@ const Dashboard: React.FC = () => {
                 textAnchor="end"
                 height={100}
               />
-              <YAxis />
+              <YAxis
+                allowDecimals={false}
+                tickFormatter={(v) => String(v)}
+                domain={[0, "dataMax + 1"]}
+              />
               <Tooltip />
               <Legend />
               <Bar dataKey="Active" fill="#10b981" />
@@ -517,7 +565,12 @@ const Dashboard: React.FC = () => {
                 height={80}
               />
 
-              <YAxis />
+              <YAxis
+                allowDecimals={false}
+                tickFormatter={(v) => v.toString()}
+                domain={[0, "dataMax + 1"]}
+              />
+
               <Tooltip labelFormatter={(value) => formatDateTime(value)} />
               <Legend />
               <Line

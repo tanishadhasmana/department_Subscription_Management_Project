@@ -56,8 +56,6 @@ function normalizePriceToINR(price: number, currency: string | null, type: strin
     monthlyEquivalentINR = amountInINR;
   } else if (t === "yearly") {
     monthlyEquivalentINR = Number((amountInINR / 12).toFixed(2));
-  } else if (t === "quarterly") {
-    monthlyEquivalentINR = Number((amountInINR / 3).toFixed(2));
   } else if (t === "lifetime") {
     // treat as one-time charge
     oneTimeINR = amountInINR;
@@ -175,9 +173,10 @@ export const getDashboardMetricsService = async (filters: DashboardFilters) => {
     // Note: recentRow is number of created/active in recent window; not used for totalActive snapshot
   }
 
-  // active percentage calculation
+  // active percentage calculation --- total active is current active
   let activePercentage: number | null = null;
   if (prevActive > 0) {
+
     activePercentage = ((totalActive - prevActive) / prevActive) * 100;
   } else if (prevActive === 0 && totalActive > 0) {
     // no previous data -> mark as new increase
@@ -256,8 +255,7 @@ export const getDashboardMetricsService = async (filters: DashboardFilters) => {
   let spendPercentage: number | null = null;
   if (prevSpendINR > 0) {
 // if current more than previous loss, and if curent less than previous profit.
-    spendPercentage = ((prevSpendINR - totalSpendINR) / prevSpendINR) * 100;
-
+   spendPercentage = ((totalSpendINR - prevSpendINR) / prevSpendINR) * 100
 
   } else if (prevSpendINR === 0 && totalSpendINR > 0) {
     spendPercentage = 100;
