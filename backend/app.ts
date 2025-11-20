@@ -12,12 +12,20 @@ import userRoute from "./src/routes/userRoutes";
 import subscriptionRoute from "./src/routes/subscriptionRoutes";
 import departmentRoute from "./src/routes/departmentRoutes";
 import passwordRoute from "./src/routes/passwordRoutes";
-
-
+import currencyRoute from "./src/routes/currencyRoutes";
 
 //  Import cron job starter
 import { startSubscriptionReminderCron } from "./src/crons/subscriptionReminderCron";
 import { testEmailConnection } from "./src/utils/mailer";
+import { startCurrencyUpdateCron } from "./src/crons/updateCurrencyRatesCron";
+
+
+// to get the latst rates -- GET http://localhost:3002/api/currency/latest
+
+// to manually update rates -- GET http://localhost:3002/api/currency/update , means fetching through API now.
+
+
+
 
 dotenv.config();
 
@@ -37,13 +45,13 @@ app.use(
       "Accept",
       "Authorization",
       "X-Requested-With",
-      "Cookie"
+      "Cookie",
     ],
-    exposedHeaders: ["Set-Cookie"]
+    exposedHeaders: ["Set-Cookie"],
   })
 );
 
-app.use(express.json()); 
+app.use(express.json());
 
 app.use(
   helmet({
@@ -78,6 +86,7 @@ app.get("/", (req: Request, res: Response) => {
 /* ---------------------------
    🧱 Mount Routes
 ---------------------------- */
+app.use("/api/currency", currencyRoute);
 app.use("/api/dashboard", dashboardRoute);
 app.use("/api/users", userRoute);
 app.use("/api/departments", departmentRoute);
@@ -91,18 +100,20 @@ const PORT = process.env.PORT || 3002;
 
 app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);
-  
+
   // ✅ Test email connection on startup
   console.log("\n📧 Testing email connection...");
   const emailReady = await testEmailConnection();
-  
+
   if (emailReady) {
     console.log("✅ Email system ready\n");
-    
-    // ✅ Start the subscription reminder cron job
+    // Start the subscription reminder cron job
     startSubscriptionReminderCron();
   } else {
-    console.log("⚠️  Email system not ready. Please check your .env configuration.\n");
+    console.log(
+      "⚠️  Email system not ready. Please check your .env configuration.\n"
+    );
   }
+  console.log("\n🔁 Starting currency update cron...");
+  startCurrencyUpdateCron();
 });
-

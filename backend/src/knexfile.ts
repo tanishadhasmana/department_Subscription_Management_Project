@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import path from "path";
 
-dotenv.config({ path: path.resolve(__dirname, "../.env") }); // ✅ load from backend/.env
+dotenv.config({ path: path.resolve(__dirname, "../.env") }); 
 
 const config = {
   development: {
