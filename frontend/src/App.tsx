@@ -9,8 +9,8 @@ const App = () => (
   <BrowserRouter>
     <AuthProvider>
       <AppRouter />
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
     </AuthProvider>
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
   </BrowserRouter>
 );
 

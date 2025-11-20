@@ -11,7 +11,7 @@ import {
   Calendar,
   IndianRupee,
   AlertCircle,
-  Package,
+  Package
 } from "lucide-react";
 import {
   PieChart,
@@ -32,6 +32,7 @@ import { RingLoader } from "react-spinners";
 import toast from "react-hot-toast";
 // for multi select dropdown
 import Select from "react-select";
+import DateRangePicker from "../../components/Layout/DateRangePicker";
 import type {
   Department,
   Option,
@@ -42,32 +43,36 @@ import type {
   DeptSpendItem,
 } from "../../types/Dashboard";
 
+
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  // used to shwow loading spinner till data is fetched
+  // used to show loading spinner till data is fetched
   const [loading, setLoading] = useState(true);
   // state to hold the fetched metrics data from backend
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   // state to hold all departments for multiselect filter dropdown
   const [departments, setDepartments] = useState<Department[]>([]);
 
-  // Filters
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  // Filters - NEW: using date range object instead of separate start/end dates
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
+    from: undefined,
+    to: undefined,
+  });
   const [selectedDepartments, setSelectedDepartments] = useState<Option[]>([]);
   const [subscriptionType, setSubscriptionType] = useState("all");
   const [status, setStatus] = useState("all");
 
+  // UPDATED: Check if filters are empty
   const isFilterEmpty =
-    !startDate &&
-    !endDate &&
+    !dateRange.from &&
+    !dateRange.to &&
     selectedDepartments.length === 0 &&
     subscriptionType === "all" &&
     status === "all";
 
+  // UPDATED: Clear all filters including date range
   const handleClearFilters = () => {
-    setStartDate("");
-    setEndDate("");
+    setDateRange({ from: undefined, to: undefined });
     setSelectedDepartments([]);
     setSubscriptionType("all");
     setStatus("all");
@@ -88,12 +93,17 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // UPDATED: Convert date range to YYYY-MM-DD format for API
   const loadMetrics = async () => {
     try {
       setLoading(true);
       const filters = {
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
+        startDate: dateRange.from
+          ? dateRange.from.toISOString().split("T")[0]
+          : undefined,
+        endDate: dateRange.to
+          ? dateRange.to.toISOString().split("T")[0]
+          : undefined,
         departments: selectedDepartments.map((d) => d.value),
         subscriptionType:
           subscriptionType !== "all" ? subscriptionType : undefined,
@@ -112,7 +122,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // date formating fucntion
+  // date formatting function
   const formatDateTime = (isoString: string): string => {
     if (!isoString) return "";
 
@@ -137,10 +147,12 @@ const Dashboard: React.FC = () => {
     loadMetrics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   // triggered when apply filters button is clicked
   const handleApplyFilters = () => {
     loadMetrics();
   };
+
   // like for 1-HR, for 2-Finance etc
   const departmentOptions: Option[] = departments.map((d) => ({
     value: String(d.id),
@@ -171,6 +183,7 @@ const Dashboard: React.FC = () => {
       </div>
     );
   }
+
   // access to data returned by backend
   const { kpis, charts, detailedData } = metrics;
 
@@ -208,28 +221,12 @@ const Dashboard: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Filters</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Date Range */}
+          {/* Date Range Picker */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">
-              Start Date
+              Date Range
             </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              End Date
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
+            <DateRangePicker value={dateRange} onChange={setDateRange} />
           </div>
 
           {/* Department Multi-select */}
@@ -283,6 +280,8 @@ const Dashboard: React.FC = () => {
             </select>
           </div>
         </div>
+
+        {/* Action Buttons */}
         <div className="mt-4 flex justify-end gap-3">
           {/* Clear Button */}
           <button
@@ -336,10 +335,6 @@ const Dashboard: React.FC = () => {
               ) : (
                 <TrendingDown size={16} />
               )}
-              {/* like if -10 etc so convert to 10, absolute */}
-              {/* {kpis.totalActiveSubscriptions.percentage &&
-                Math.abs(kpis.totalActiveSubscriptions.percentage)}
-              % */}
               {Math.abs(kpis.totalActiveSubscriptions.percentage ?? 0)}%
             </div>
           </div>
@@ -376,7 +371,7 @@ const Dashboard: React.FC = () => {
             ₹ {kpis.totalSpend.value.toLocaleString()}
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Total Monthly/Annual Spend
+            Total Subscription Spend
           </p>
         </div>
 
@@ -413,7 +408,7 @@ const Dashboard: React.FC = () => {
             ₹ {kpis.averageCostPerDepartment?.value.toLocaleString() ?? 0}
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Average Cost per Department
+             Subscriptions Average Cost
           </p>
         </div>
       </div>
@@ -507,7 +502,7 @@ const Dashboard: React.FC = () => {
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={aggregatedStatusData}>
-              <CartesianGrid strokeDasharray="3 3" />
+              {/* <CartesianGrid strokeDasharray="3 3" /> */}
               <XAxis
                 dataKey="department_name"
                 angle={-45}
@@ -537,7 +532,7 @@ const Dashboard: React.FC = () => {
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={charts.topExpensive} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" />
+              {/* <CartesianGrid strokeDasharray="3 3" /> */}
               <XAxis type="number" />
               <YAxis dataKey="subsc_name" type="category" width={150} />
               <Tooltip
@@ -555,7 +550,7 @@ const Dashboard: React.FC = () => {
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={charts.upcomingRenewals}>
-              <CartesianGrid strokeDasharray="3 3" />
+              {/* <CartesianGrid strokeDasharray="3 3" /> */}
 
               <XAxis
                 dataKey="date"
