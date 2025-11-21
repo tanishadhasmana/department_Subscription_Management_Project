@@ -4,7 +4,6 @@ import {
   getSubscriptionByIdService,
   createSubscriptionService,
   updateSubscriptionService,
-  updateSubscriptionStatusService,
   deleteSubscriptionService,
   getSubscriptionsCountService,
   exportSubscriptionsCSVService,
@@ -217,102 +216,6 @@ export const updateSubscription = async (req: Request, res: Response) => {
     });
   }
 };
-
-
-// ----------------------------
-// Update Subscription Status (toggle active/inactive)
-// ----------------------------
-
-
-// export const updateSubscriptionStatus = async (req: Request, res: Response) => {
-//   try {
-//     const subscriptionId = Number(req.params.id);
-//     const { status } = req.body;
-
-//     if (isNaN(subscriptionId)) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: validationMessage.invalid("ID") });
-//     }
-
-//     if (!["Active", "Inactive"].includes(status)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: validationMessage.invalid("status"),
-//       });
-//     }
-
-//     const updatedSubscription = await updateSubscriptionStatusService(
-//       subscriptionId,
-//       status
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       message: responseMessage.updated("Subscription status"),
-//       data: updatedSubscription,
-//     });
-//   } catch (error: any) {
-//     console.error(error);
-//     return res.status(500).json({
-//       success: false,
-//       message: responseMessage.error("updating subscription status"),
-//       error: error.message,
-//     });
-//   }
-// };
-
-export const updateSubscriptionStatus = async (req: Request, res: Response) => {
-  try {
-    const subscriptionId = Number(req.params.id);
-    let { status } = req.body;
-
-    if (isNaN(subscriptionId)) {
-      return res.status(400).json({
-        success: false,
-        message: validationMessage.invalid("ID"),
-      });
-    }
-
-    // ✅ Normalize and validate status in a case-insensitive way
-    if (typeof status !== "string") {
-      return res.status(400).json({
-        success: false,
-        message: validationMessage.invalid("status"),
-      });
-    }
-
-    const normalized = status.toLowerCase();
-    if (!["active", "inactive"].includes(normalized)) {
-      return res.status(400).json({
-        success: false,
-        message: validationMessage.invalid("status"),
-      });
-    }
-
-    // ✅ Convert normalized value to DB format (capitalized)
-    status = normalized === "active" ? "Active" : "Inactive";
-
-    const updatedSubscription = await updateSubscriptionStatusService(
-      subscriptionId,
-      status
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: responseMessage.updated("Subscription status"),
-      data: updatedSubscription,
-    });
-  } catch (error: any) {
-    console.error("Update status error:", error);
-    return res.status(500).json({
-      success: false,
-      message: responseMessage.error("updating subscription status"),
-      error: error.message,
-    });
-  }
-};
-
 
 
 // ----------------------------

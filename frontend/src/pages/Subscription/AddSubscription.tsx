@@ -30,7 +30,6 @@ const AddSubscription: React.FC = () => {
     trigger,
     formState: { errors },
   } = useForm<SubscriptionFormData>({
-    defaultValues: { subsc_status: "active" },
     mode: "all",
   });
 
@@ -516,27 +515,6 @@ const AddSubscription: React.FC = () => {
                 )}
               </div>
 
-              {/* Status */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">
-                  Status <span className="text-red-500">*</span>
-                </label>
-                <select
-                  {...register("subsc_status", { required: "Status is required" })}
-                  className={`w-full px-4 py-3 border rounded-lg transition-all focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    errors.subsc_status ? "border-red-500" : "border-gray-300"
-                  }`}
-                >
-                  <option value="">Select Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-                {errors.subsc_status && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.subsc_status.message}
-                  </p>
-                )}
-              </div>
 
               {/* Portal Details */}
               <div className="md:col-span-2 space-y-2">

@@ -4,7 +4,6 @@ import {
   getSubscriptionById,
   createSubscription,
   updateSubscription,
-  updateSubscriptionStatus,
   deleteSubscription,
   getSubscriptionsCount,
   exportAllSubscriptions,
@@ -30,9 +29,12 @@ router.get("/:id", protect, requirePermission("subscription_list"), getSubscript
 
 router.post("/", protect, requirePermission("subscription_add"), createSubscription);
 
-router.put("/:id", protect, requirePermission("subscription_edit"), updateSubscription);
-
-router.put("/:id/status", protect, requirePermission("subscription_edit"), updateSubscriptionStatus);
+router.put(
+  "/:id",
+  protect,
+  requirePermission("subscription_edit"),
+  updateSubscription
+);
 
 router.delete("/:id", protect, requirePermission("subscription_delete"), deleteSubscription);
 

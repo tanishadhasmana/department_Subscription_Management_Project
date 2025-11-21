@@ -10,7 +10,6 @@ export const getSubscriptionsCountService = async (): Promise<number> => {
   return Number(result?.[0]?.total ?? 0);
 };
 
-
 export const getAllSubscriptionsService = async (
   page: number,
   limit: number,
@@ -25,7 +24,7 @@ export const getAllSubscriptionsService = async (
       .leftJoin("departments as d", "s.department_id", "d.id")
       .whereNull("s.deleted_at");
 
-    // ✅ Apply filters dynamically (AND condition)
+    // Apply filters dynamically (AND condition)
     Object.entries(filters).forEach(([key, value]) => {
       if (value && value.trim() !== "") {
         const val = value.toLowerCase();
@@ -61,7 +60,7 @@ export const getAllSubscriptionsService = async (
       }
     });
 
-    // ✅ Sorting
+    // Sorting
     const ALLOWED_SORTS: Record<string, string> = {
       id: "s.id",
       subsc_name: "s.subsc_name",
@@ -79,7 +78,7 @@ export const getAllSubscriptionsService = async (
       baseQuery = baseQuery.orderBy("s.created_at", "desc");
     }
 
-    // ✅ Get paginated results
+    // Get paginated results
     const data = await baseQuery
       .clone()
       .select(
@@ -88,7 +87,7 @@ export const getAllSubscriptionsService = async (
         "s.subsc_type",
         "s.subsc_price",
         "s.subsc_currency",
-        "s.subsc_status",
+        "s.subsc_status", // ✅ Get status AS-IS from DB (CRON updates it)
         "s.purchase_date",
         "s.renew_date",
         "s.portal_detail",
@@ -98,14 +97,14 @@ export const getAllSubscriptionsService = async (
       .limit(limit)
       .offset(offset);
 
-    // ✅ Decrypt sensitive data if needed
+    // ✅ REMOVED auto-calculation logic - just decrypt sensitive data
     const decryptedData = data.map((item) => ({
       ...item,
       portal_detail: item.portal_detail ? decrypt(item.portal_detail) : null,
       payment_method: item.payment_method ? decrypt(item.payment_method) : null,
     }));
 
-    // ✅ Count total records for pagination
+    // Count total records for pagination
     const countResult = await baseQuery
       .clone()
       .count<{ total: number }>("s.id as total");
@@ -122,6 +121,22 @@ export const getAllSubscriptionsService = async (
     console.error("getAllSubscriptionsService error:", err);
     throw err;
   }
+};
+
+// ✅ Helper function to calculate status based on renew_date
+export const calculateSubscriptionStatus = (
+  renewDate: string | null
+): "Active" | "Inactive" => {
+  if (!renewDate) {
+    return "Active"; // If no renew date (Lifetime), keep as Active
+  }
+
+  const renewal = new Date(renewDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  renewal.setHours(0, 0, 0, 0);
+
+  return renewal < today ? "Inactive" : "Active";
 };
 
 /**
@@ -162,17 +177,16 @@ export const exportSubscriptionsCSVService = async () => {
   //   s.department_name || "-",
   //   s.subsc_status,
   // ]);
-const rows = subscriptions.map((s, index) => [
-  index + 1, //so in the exported csv i always get inc numebers.
-  s.subsc_name,
-  s.subsc_type,
-  s.subsc_price,
-  s.subsc_currency,
-  s.renew_date || "-",
-  s.department_name || "-",
-  s.subsc_status,
-]);
-
+  const rows = subscriptions.map((s, index) => [
+    index + 1, //so in the exported csv i always get inc numebers.
+    s.subsc_name,
+    s.subsc_type,
+    s.subsc_price,
+    s.subsc_currency,
+    s.renew_date || "-",
+    s.department_name || "-",
+    s.subsc_status,
+  ]);
 
   const csvContent = [headers, ...rows]
     .map((row) => row.map((v) => `"${v}"`).join(","))
@@ -220,26 +234,20 @@ export const getSubscriptionByIdService = async (id: number) => {
  * Create a new subscription
  */
 
-
 export const createSubscriptionService = async (data: any) => {
-
-
-
-
   const existing = await db("subscriptions")
-  .where({
-    subsc_name: data.subsc_name,
-    department_id: data.department_id,
-  })
-  .whereNull("deleted_at")
-  .first();
+    .where({
+      subsc_name: data.subsc_name,
+      department_id: data.department_id,
+    })
+    .whereNull("deleted_at")
+    .first();
 
-if (existing) {
-  throw new Error("Subscription with same name already exists for this department.");
-}
-
-
-
+  if (existing) {
+    throw new Error(
+      "Subscription with same name already exists for this department."
+    );
+  }
 
   const insertData = {
     subsc_name: data.subsc_name,
@@ -289,20 +297,25 @@ if (existing) {
  * Update existing subscription
  */
 export const updateSubscriptionService = async (id: number, data: any) => {
-  const updateData = {
+  const updateData: any = {
     subsc_name: data.subsc_name,
     subsc_type: data.subsc_type,
     subsc_price: data.subsc_price,
     subc_url: data.subc_url || null,
     subsc_currency: data.subsc_currency,
-    renew_date: data.renew_date || null,
+    renew_date:
+      data.renew_date && data.renew_date.trim() !== "" ? data.renew_date : null,
     portal_detail: data.portal_detail ? encrypt(data.portal_detail) : null,
     payment_method: data.payment_method ? encrypt(data.payment_method) : null,
     subsc_status: data.subsc_status,
-    purchase_date: data.purchase_date || null,
     department_id: data.department_id ? Number(data.department_id) : null,
     updated_at: db.fn.now(),
   };
+
+  // purchase_date cannot be null, so only update if valid
+  if (data.purchase_date && data.purchase_date.trim() !== "") {
+    updateData.purchase_date = data.purchase_date;
+  }
 
   await db("subscriptions").where({ id }).update(updateData);
 
@@ -325,31 +338,6 @@ export const updateSubscriptionService = async (id: number, data: any) => {
       "s.updated_at"
     )
     .where("s.id", id)
-    .first();
-
-  return {
-    ...sub,
-    portal_detail: sub.portal_detail ? decrypt(sub.portal_detail) : null,
-    payment_method: sub.payment_method ? decrypt(sub.payment_method) : null,
-  };
-};
-
-/**
- * Update subscription status only
- */
-export const updateSubscriptionStatusService = async (
-  id: number,
-  status: string
-) => {
-  await db("subscriptions").where({ id }).update({
-    subsc_status: status,
-    updated_at: db.fn.now(),
-  });
-
-  const sub = await db("subscriptions")
-    .leftJoin("departments", "subscriptions.department_id", "departments.id")
-    .select("subscriptions.*", "departments.deptName as department_name")
-    .where("subscriptions.id", id)
     .first();
 
   return {

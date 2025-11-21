@@ -16,6 +16,7 @@ import currencyRoute from "./src/routes/currencyRoutes";
 
 //  Import cron job starter
 import { startSubscriptionReminderCron } from "./src/crons/subscriptionReminderCron";
+import { startSubscriptionStatusUpdateCron } from "./src/crons/subscriptionStatusUpdateCron";
 import { testEmailConnection } from "./src/utils/mailer";
 import { startCurrencyUpdateCron } from "./src/crons/updateCurrencyRatesCron";
 
@@ -107,7 +108,7 @@ app.listen(PORT, async () => {
 
   if (emailReady) {
     console.log("✅ Email system ready\n");
-    // Start the subscription reminder cron job
+    // Start the subscription reminder cron job--9 AM
     startSubscriptionReminderCron();
   } else {
     console.log(
@@ -116,4 +117,9 @@ app.listen(PORT, async () => {
   }
   console.log("\n🔁 Starting currency update cron...");
   startCurrencyUpdateCron();
+
+
+   console.log("\n🔄 Starting subscription status update cron...");
+  startSubscriptionStatusUpdateCron();
+
 });

@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   getSubscriptions,
   deleteSubscription,
-  toggleSubscriptionStatus,
   exportSubscriptionsCSV,
 } from "../../services/subscriptionService";
 import type { Subscription } from "../../types/Subscription";
@@ -153,22 +152,6 @@ const SubscriptionList: React.FC = () => {
     });
   };
 
-  const handleToggle = async (id: number, newStatus: "active" | "inactive") => {
-    try {
-      await toggleSubscriptionStatus(id, newStatus);
-      setSubscriptions((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, subsc_status: newStatus } : s))
-      );
-      toast.success(
-        newStatus === "active"
-          ? "Subscription marked as active"
-          : "Subscription marked as inactive"
-      );
-    } catch (err) {
-      console.error("Status update failed:", err);
-      toast.error("Failed to update status");
-    }
-  };
 
   useEffect(() => {
     loadSubscriptions(currentPage, { searchValues, statusFilter });
@@ -210,13 +193,11 @@ const SubscriptionList: React.FC = () => {
   };
 
   return (
-
     // <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 p-6">
     //   <div className="max-w-7xl mx-auto space-y-6">
-    
-  <div className="p-6">
-    <div className="space-y-6">
 
+    <div className="p-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -457,7 +438,10 @@ const SubscriptionList: React.FC = () => {
                       </tr>
                     ) : (
                       subscriptions.map((s, index) => (
-                        <tr key={s.id} className="hover:bg-blue-50/50 transition-colors">
+                        <tr
+                          key={s.id}
+                          className="hover:bg-blue-50/50 transition-colors"
+                        >
                           <td className="px-6 py-4 text-sm text-gray-900">
                             {(currentPage - 1) * limit + index + 1}
                           </td>
@@ -480,28 +464,27 @@ const SubscriptionList: React.FC = () => {
                           <td className="px-6 py-4 text-sm text-gray-900">
                             {s.department_name || "-"}
                           </td>
+
                           <td className="px-6 py-4">
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={
-                                  s.subsc_status?.toLowerCase() === "active"
-                                }
-                                onChange={(e) =>
-                                  handleToggle(
-                                    s.id,
-                                    e.target.checked ? "active" : "inactive"
-                                  )
-                                }
-                                className="sr-only peer"
-                              />
-                              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                            </label>
+                            <span
+                              className={`inline-flex items-center px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
+                                s.subsc_status?.toLowerCase() === "active"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {s.subsc_status?.toLowerCase() === "active"
+                                ? "Active"
+                                : "Inactive"}
+                            </span>
                           </td>
+
                           <td className="px-6 py-4">
                             <div className="flex items-center justify-center gap-3">
                               <button
-                                onClick={() => nav(`/subscription/edit/${s.id}`)}
+                                onClick={() =>
+                                  nav(`/subscription/edit/${s.id}`)
+                                }
                                 className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
                                 title="Edit Subscription"
                               >
@@ -574,5 +557,3 @@ const SubscriptionList: React.FC = () => {
 };
 
 export default SubscriptionList;
-
-

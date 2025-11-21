@@ -92,13 +92,6 @@ export const deleteSubscription = async (id: number) => {
   return res.data;
 };
 
-// Toggle active / inactive status
-export const toggleSubscriptionStatus = async (id: number, status: "active" | "inactive") => {
-  const res = await api.put(`/subscriptions/${id}/status`, { status }, { withCredentials: true });
-  return res.data;
-};
-
-
 
 
 
