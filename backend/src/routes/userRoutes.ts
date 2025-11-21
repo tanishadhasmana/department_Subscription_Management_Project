@@ -13,6 +13,8 @@ import {
   updateUser,
   deleteUser,
   getUsersCount,
+   verifyOTPController,
+  resendOTPController
 } from "../controllers/userController";
 import { protect, requirePermission } from "../middleware/authMiddleware";
 
@@ -82,5 +84,12 @@ router.put(
 );
 
 router.delete("/:id", protect, requirePermission("user_delete"), deleteUser);
+
+// ----------------------------
+// OTP verification routes
+// ----------------------------
+router.post("/verify-otp", verifyOTPController);
+router.post("/resend-otp", resendOTPController);
+
 
 export default router;

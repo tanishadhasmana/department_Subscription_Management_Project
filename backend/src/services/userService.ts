@@ -1,5 +1,6 @@
 import db from "../../src/connection";
 import bcrypt from "bcrypt";
+import { generateOTP, encryptOTP, decryptOTP, isOTPExpired } from "../utils/otpHelper";
 
 // ----------------------------
 // Create First Admin
@@ -327,6 +328,79 @@ export const loginUserService = async (email: string, password: string) => {
   };
 };
 
+export const completeOTPLoginService = async (userId: number): Promise<{
+  user: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_no: string | null;
+    role_id: number | null;
+    role_name: string | null;
+    status: string;
+    permissions: Array<{ id: number; name: string }>;
+  };
+}> => {
+  // Fetch user with role
+  const user = await db("users")
+    .leftJoin("roles", "users.role_id", "roles.id")
+    .select(
+      "users.id",
+      "users.first_name",
+      "users.last_name",
+      "users.email",
+      "users.phone_no",
+      "users.role_id",
+      "roles.role_name",
+      "users.status"
+    )
+    .where("users.id", userId)
+    .whereNull("users.deleted_at")
+    .first();
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Get permissions
+  let permissions: any[] = [];
+  if (user.role_id) {
+    permissions = await db("role_permissions")
+      .leftJoin("permissions", "role_permissions.permission_id", "permissions.id")
+      .where("role_permissions.role_id", user.role_id)
+      .select("permissions.id", "permissions.name");
+  }
+
+  return {
+    user: {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      phone_no: user.phone_no,
+      role_id: user.role_id,
+      role_name: user.role_name,
+      status: user.status,
+      permissions,
+    },
+  };
+};
+
+
+export const getUserByIdForEmailService = async (userId: number) => {
+  return db("users")
+    .select(
+      "users.id",
+      "users.first_name",
+      "users.last_name",
+      "users.email"
+    )
+    .where("users.id", userId)
+    .whereNull("users.deleted_at")
+    .first();
+};
+
+
 // ----------------------------
 // Get Current User (Me)
 // ----------------------------
@@ -378,4 +452,127 @@ export const deleteUserService = async (id: number, performedById: number) => {
     });
 
   return result > 0;
+};
+
+
+/**
+ * Generate and store OTP for user
+ */
+export const generateAndStoreOTP = async (userId: number): Promise<string> => {
+  const otp = generateOTP();
+  const encryptedOTP = encryptOTP(otp);
+  const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes from now
+
+  await db("users")
+    .where({ id: userId })
+    .update({
+      otp_code: encryptedOTP,
+      otp_expires_at: expiresAt,
+      otp_attempts: 0,
+      otp_created_at: db.fn.now(),
+    });
+
+  return otp; // Return plain OTP to send via email
+};
+
+/**
+ * Verify OTP entered by user
+ */
+export const verifyOTP = async (
+  userId: number,
+  enteredOTP: string
+): Promise<{ success: boolean; message: string }> => {
+  const user = await db("users")
+    .where({ id: userId })
+    .whereNull("deleted_at")
+    .first();
+
+  if (!user) {
+    return { success: false, message: "User not found" };
+  }
+
+  // Check if OTP exists
+  if (!user.otp_code || !user.otp_expires_at) {
+    return { success: false, message: "No OTP found. Please request a new one." };
+  }
+
+  // Check if OTP has expired
+  if (isOTPExpired(user.otp_expires_at)) {
+    // Clear expired OTP
+    await clearOTP(userId);
+    return { success: false, message: "OTP has expired. Please request a new one." };
+  }
+
+  // Check attempts (max 3 attempts)
+  if (user.otp_attempts >= 3) {
+    await clearOTP(userId);
+    return { success: false, message: "Too many failed attempts. Please request a new OTP." };
+  }
+
+  // Decrypt and verify OTP
+  const decryptedOTP = decryptOTP(user.otp_code);
+  
+  if (decryptedOTP === enteredOTP) {
+    // Success - clear OTP from database
+    await clearOTP(userId);
+    return { success: true, message: "OTP verified successfully" };
+  } else {
+    // Increment failed attempts
+    await db("users")
+      .where({ id: userId })
+      .increment("otp_attempts", 1);
+    
+    const remainingAttempts = 3 - (user.otp_attempts + 1);
+    return {
+      success: false,
+      message: `Invalid OTP. ${remainingAttempts} attempt(s) remaining.`,
+    };
+  }
+};
+
+/**
+ * Clear OTP data from user record
+ */
+export const clearOTP = async (userId: number): Promise<void> => {
+  await db("users")
+    .where({ id: userId })
+    .update({
+      otp_code: null,
+      otp_expires_at: null,
+      otp_attempts: 0,
+      otp_created_at: null,
+    });
+};
+
+/**
+ * Resend OTP (with rate limiting check)
+ */
+export const resendOTP = async (userId: number): Promise<{ success: boolean; otp?: string; message: string }> => {
+  const user = await db("users")
+    .where({ id: userId })
+    .whereNull("deleted_at")
+    .first();
+
+  if (!user) {
+    return { success: false, message: "User not found" };
+  }
+
+  // Rate limiting: prevent resend within 30 seconds
+  if (user.otp_created_at) {
+    const lastCreated = new Date(user.otp_created_at).getTime();
+    const now = new Date().getTime();
+    const timeSinceLastOTP = (now - lastCreated) / 1000; // in seconds
+
+    if (timeSinceLastOTP < 30) {
+      const waitTime = Math.ceil(30 - timeSinceLastOTP);
+      return {
+        success: false,
+        message: `Please wait ${waitTime} seconds before requesting a new OTP.`,
+      };
+    }
+  }
+
+  // Generate new OTP
+  const otp = await generateAndStoreOTP(userId);
+  return { success: true, otp, message: "New OTP sent successfully" };
 };

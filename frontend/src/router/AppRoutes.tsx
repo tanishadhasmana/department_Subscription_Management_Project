@@ -60,22 +60,7 @@ const AppRouter = () => {
               </ProtectedRoute>
             }
           />
-          {/* <Route
-            path="/users/add"
-            element={
-              <ProtectedRoute requiredPermission="user_add">
-                <AddUser />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/users/edit/:id"
-            element={
-              <ProtectedRoute requiredPermission="user_edit">
-                <AddUser />
-              </ProtectedRoute>
-            }
-          /> */}
+          
 
           {/* Subscriptions */}
           <Route
