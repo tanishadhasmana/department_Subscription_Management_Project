@@ -6,6 +6,8 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 // import path from "path";
 import cookieParser from "cookie-parser";
+import db from "./src/connection"
+
 
 import dashboardRoute from "./src/routes/dashboardRoute";
 import userRoute from "./src/routes/userRoutes";
@@ -98,6 +100,11 @@ app.use("/api/password", passwordRoute);
     Start Server & Initialize Cron
 ---------------------------- */
 const PORT = process.env.PORT || 3002;
+
+(async () => {
+  const result = await db.raw("SELECT DATABASE() as db");
+  console.log("🔥 BACKEND IS USING DATABASE:", result[0][0].db);
+})();
 
 app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);

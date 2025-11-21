@@ -185,13 +185,13 @@ export const updateUserStatus = async (req: Request, res: Response) => {
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-
+    console.log(`[LOGIN] Attempting login for email: ${email}`);
     // Validate credentials (from service)
     const user = await loginUserService(email, password);
-
+     console.log(`[LOGIN] User validated successfully: ${user.email} (ID: ${user.id})`);
     // Generate OTP (from service)
     const otp = await generateAndStoreOTP(user.id);
-
+    console.log(`[LOGIN] OTP generated successfully: ${otp}`);
     // Send OTP email
     const subject = "Your Login Verification Code";
     const html = `
@@ -215,7 +215,7 @@ export const loginUser = async (req: Request, res: Response) => {
     `;
 
     await sendMail(user.email, subject, `Your OTP is: ${otp}`, html);
-
+        console.log(`[LOGIN] Email sent successfully`);
     // Return user info (without token yet) - controller only formats response
     res.status(200).json({
       success: true,

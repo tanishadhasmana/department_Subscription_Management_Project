@@ -455,80 +455,140 @@ export const deleteUserService = async (id: number, performedById: number) => {
 };
 
 
-/**
- * Generate and store OTP for user
- */
+
+
+
 export const generateAndStoreOTP = async (userId: number): Promise<string> => {
+  console.log(`[OTP] === Starting generateAndStoreOTP for userId=${userId} ===`);
+  
   const otp = generateOTP();
+  console.log(`[OTP] Generated plain OTP: ${otp}`);
+  
   const encryptedOTP = encryptOTP(otp);
-  const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes from now
+  console.log(`[OTP] Encrypted OTP: ${encryptedOTP}`);
+  
+ const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
+  .toISOString()
+  .slice(0, 19)    // "YYYY-MM-DD HH:MM:SS"
+  .replace("T", " ");
+console.log(`[OTP] Expires at: ${expiresAt}`);
 
-  await db("users")
-    .where({ id: userId })
-    .update({
-      otp_code: encryptedOTP,
-      otp_expires_at: expiresAt,
-      otp_attempts: 0,
-      otp_created_at: db.fn.now(),
-    });
+  try {
+    // First, verify user exists
+    const userExists = await db("users")
+      .where({ id: userId })
+      .whereNull("deleted_at")
+      .first();
 
-  return otp; // Return plain OTP to send via email
+    if (!userExists) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+    console.log(`[OTP] User found: ${userExists.email}`);
+
+    // Perform the update
+    console.log(`[OTP] Attempting database update...`);
+    const updatedRows = await db("users")
+      .where({ id: userId })
+      .update({
+        otp_code: encryptedOTP,
+       otp_expires_at: expiresAt,
+        otp_attempts: 0,
+        otp_created_at: db.raw("NOW()"),
+      });
+
+    console.log(`[OTP] Update returned: ${updatedRows} row(s) affected`);
+
+    // Verify the update
+    const verifyUpdate = await db("users")
+      .where({ id: userId })
+      .select("otp_code", "otp_expires_at", "otp_attempts", "otp_created_at")
+      .first();
+
+    console.log(`[OTP] Verification query result:`, JSON.stringify(verifyUpdate, null, 2));
+
+    if (!verifyUpdate || !verifyUpdate.otp_code) {
+      console.error(`[OTP] ❌ CRITICAL: Database update failed or OTP not saved!`);
+      throw new Error(`Failed to store OTP in database for user ${userId}`);
+    }
+
+    console.log(`[OTP] ✅ OTP successfully stored in database`);
+    return otp;
+
+  } catch (err: any) {
+    console.error(`[OTP] ❌ Error in generateAndStoreOTP:`, err);
+    console.error(`[OTP] Error stack:`, err.stack);
+    throw new Error(`Failed to generate OTP: ${err.message}`);
+  }
 };
+
 
 /**
  * Verify OTP entered by user
  */
+
 export const verifyOTP = async (
   userId: number,
   enteredOTP: string
 ): Promise<{ success: boolean; message: string }> => {
-  const user = await db("users")
-    .where({ id: userId })
-    .whereNull("deleted_at")
-    .first();
+  try {
+    console.log(`[OTP DEBUG] Verifying OTP for userId=${userId}, entered=${enteredOTP}`);
 
-  if (!user) {
-    return { success: false, message: "User not found" };
-  }
-
-  // Check if OTP exists
-  if (!user.otp_code || !user.otp_expires_at) {
-    return { success: false, message: "No OTP found. Please request a new one." };
-  }
-
-  // Check if OTP has expired
-  if (isOTPExpired(user.otp_expires_at)) {
-    // Clear expired OTP
-    await clearOTP(userId);
-    return { success: false, message: "OTP has expired. Please request a new one." };
-  }
-
-  // Check attempts (max 3 attempts)
-  if (user.otp_attempts >= 3) {
-    await clearOTP(userId);
-    return { success: false, message: "Too many failed attempts. Please request a new OTP." };
-  }
-
-  // Decrypt and verify OTP
-  const decryptedOTP = decryptOTP(user.otp_code);
-  
-  if (decryptedOTP === enteredOTP) {
-    // Success - clear OTP from database
-    await clearOTP(userId);
-    return { success: true, message: "OTP verified successfully" };
-  } else {
-    // Increment failed attempts
-    await db("users")
+    const user = await db("users")
       .where({ id: userId })
-      .increment("otp_attempts", 1);
+      .whereNull("deleted_at")
+      .select("id", "otp_code", "otp_expires_at", "otp_attempts", "email", "first_name")
+      .first();
+
+    console.log(`[OTP DEBUG] User found:`, user ? "Yes" : "No");
+    console.log(`[OTP DEBUG] User otp_code:`, user?.otp_code);
+    console.log(`[OTP DEBUG] User otp_expires_at:`, user?.otp_expires_at);
+    console.log(`[OTP DEBUG] User otp_attempts:`, user?.otp_attempts);
+
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+
+    if (!user.otp_code || !user.otp_expires_at) {
+      console.log("[OTP DEBUG] No OTP found in database");
+      return { success: false, message: "No OTP found. Please request a new one." };
+    }
+
+    if (isOTPExpired(user.otp_expires_at)) {
+      console.log("[OTP DEBUG] OTP expired");
+      await clearOTP(userId);
+      return { success: false, message: "OTP has expired. Please request a new one." };
+    }
+
+    if (user.otp_attempts >= 3) {
+      console.log("[OTP DEBUG] Too many attempts");
+      await clearOTP(userId);
+      return { success: false, message: "Too many failed attempts. Please request a new OTP." };
+    }
+
+    const decryptedOTP = decryptOTP(user.otp_code);
+    console.log(`[OTP DEBUG] Decrypted OTP: ${decryptedOTP}`);
+
+    if (decryptedOTP === enteredOTP) {
+      console.log("[OTP DEBUG] OTP verified successfully");
+      await clearOTP(userId);
+      return { success: true, message: "OTP verified successfully" };
+    }
+
+    // Increment failed attempts
+    console.log("[OTP DEBUG] OTP mismatch, incrementing attempts");
+    await db("users").where({ id: userId }).increment("otp_attempts", 1);
     
     const remainingAttempts = 3 - (user.otp_attempts + 1);
     return {
       success: false,
       message: `Invalid OTP. ${remainingAttempts} attempt(s) remaining.`,
     };
+  } catch (err) {
+    console.error("[OTP ERROR] verifyOTP failed:", err);
+    return { success: false, message: "Verification failed" };
   }
 };
+
 
 /**
  * Clear OTP data from user record
@@ -547,32 +607,21 @@ export const clearOTP = async (userId: number): Promise<void> => {
 /**
  * Resend OTP (with rate limiting check)
  */
-export const resendOTP = async (userId: number): Promise<{ success: boolean; otp?: string; message: string }> => {
-  const user = await db("users")
-    .where({ id: userId })
-    .whereNull("deleted_at")
-    .first();
 
-  if (!user) {
-    return { success: false, message: "User not found" };
-  }
+export const resendOTP = async (userId: number) => {
+  const user = await db("users").where({ id: userId }).first();
+  if (!user) return { success: false, message: "User not found" };
 
-  // Rate limiting: prevent resend within 30 seconds
   if (user.otp_created_at) {
     const lastCreated = new Date(user.otp_created_at).getTime();
-    const now = new Date().getTime();
-    const timeSinceLastOTP = (now - lastCreated) / 1000; // in seconds
-
-    if (timeSinceLastOTP < 30) {
-      const waitTime = Math.ceil(30 - timeSinceLastOTP);
-      return {
-        success: false,
-        message: `Please wait ${waitTime} seconds before requesting a new OTP.`,
-      };
+    const now = Date.now();
+    if ((now - lastCreated) / 1000 < 30) {
+      const waitTime = Math.ceil(30 - ((now - lastCreated) / 1000));
+      return { success: false, message: `Please wait ${waitTime} seconds before requesting a new OTP.` };
     }
   }
 
-  // Generate new OTP
   const otp = await generateAndStoreOTP(userId);
+  console.log(`[OTP] resendOTP: userId=${userId} otp=${otp}`);
   return { success: true, otp, message: "New OTP sent successfully" };
 };
