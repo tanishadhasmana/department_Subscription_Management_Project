@@ -475,7 +475,7 @@ const SubscriptionList: React.FC = () => {
                             >
                               {s.subsc_status?.toLowerCase() === "active"
                                 ? "Active"
-                                : "Inactive"}
+                                : "Expired"}
                             </span>
                           </td>
 
