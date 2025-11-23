@@ -233,6 +233,7 @@ export const loginUser = async (req: Request, res: Response) => {
 // ============================
 // VERIFY OTP (STEP 2: Complete Login)
 // ============================
+
 export const verifyOTPController = async (req: Request, res: Response) => {
   try {
     const { userId, otp } = req.body;
@@ -241,20 +242,20 @@ export const verifyOTPController = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "User ID and OTP are required" });
     }
 
-    // Verify OTP (from service - DB logic)
+    // Verify OTP (this now only clears otp_code, keeps timestamps)
     const result = await verifyOTP(userId, otp);
 
     if (!result.success) {
       return res.status(400).json({ message: result.message });
     }
 
-    // OTP verified - get user with permissions (from service - DB logic)
+    // Get user with permissions
     const { user } = await completeOTPLoginService(userId);
 
-    // Generate token (controller handles token generation for HTTP)
+    // Generate token
     const token = generateToken(user);
 
-    // Set cookie (controller handles HTTP response)
+    // Set cookie
     setTokenCookie(res, token);
 
     res.status(200).json({
@@ -268,9 +269,11 @@ export const verifyOTPController = async (req: Request, res: Response) => {
   }
 };
 
+
 // ============================
 // RESEND OTP
 // ============================
+
 export const resendOTPController = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
@@ -279,21 +282,21 @@ export const resendOTPController = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    // Resend OTP (from service - handles rate limiting, DB logic)
+    // Resend OTP (from service - handles DB logic)
     const result = await resendOTP(userId);
 
     if (!result.success) {
       return res.status(400).json({ message: result.message });
     }
 
-    // Get user by ID (NOT by email/password) - create new service function
+    // Get user for email
     const user = await getUserByIdForEmailService(userId);
 
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
 
-    // Send email (controller handles email dispatch)
+    // Send email
     const subject = "Your New Verification Code";
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -325,6 +328,8 @@ export const resendOTPController = async (req: Request, res: Response) => {
     res.status(500).json({ message: err.message || "Failed to resend OTP" });
   }
 };
+
+
 // ============================
 // LOGOUT USER
 // ============================

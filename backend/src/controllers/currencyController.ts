@@ -7,7 +7,7 @@ import { upsertCurrencyRates } from "../services/currencyDbService";
 export const getLatestRates = async (req: Request, res: Response) => {
   try {
     const rates = await getAllRates();
-    // if DB empty, try to fetch directly (fallback)
+    // if DB empty, try to fetch directly 
     if (!rates || Object.keys(rates).length === 0) {
       try {
         const fetched = await fetchLatestRatesFromOXR();

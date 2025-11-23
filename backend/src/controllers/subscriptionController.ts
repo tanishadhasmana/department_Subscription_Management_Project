@@ -40,7 +40,7 @@ export const getAllSubscriptions = async (req: Request, res: Response) => {
     const sortBy = (req.query.sortBy as string) || undefined;
     const sortOrder = (req.query.sortOrder as "asc" | "desc") || "desc";
 
-    // ✅ Collect all possible filters dynamically
+    // Collect all possible filters dynamically
     const filters = {
       subsc_name: req.query.subsc_name as string,
       subsc_type: req.query.subsc_type as string,
@@ -50,13 +50,16 @@ export const getAllSubscriptions = async (req: Request, res: Response) => {
       subsc_status: req.query.subsc_status as string,
     };
 
-    const result = await getAllSubscriptionsService(
-      page,
-      limit,
-      filters,
-      sortBy,
-      sortOrder
-    );
+const search = typeof req.query.search === "string" && req.query.search.trim() !== "" ? req.query.search.trim() : undefined;
+
+const result = await getAllSubscriptionsService(
+  page,
+  limit,
+  filters,
+  sortBy,
+  sortOrder,
+  search //all as string are searchable
+);
 
     return res.status(200).json({
       success: true,
@@ -162,12 +165,6 @@ export const createSubscription = async (req: Request, res: Response) => {
     console.error("Create subscription error:", error);
     return res.status(400).json({
       success: false,
-      // message: responseMessage.error("creating subscription"),
-      // error: error.message,
-
-
-      // message: "Subscription for this department already exists",
-
       message: error.message || "Failed to create subscription", 
     });
   }

@@ -10,73 +10,77 @@ export const getSubscriptionsCountService = async (): Promise<number> => {
   return Number(result?.[0]?.total ?? 0);
 };
 
+
 export const getAllSubscriptionsService = async (
-  page: number,
+   page: number,
   limit: number,
   filters: Record<string, string | undefined>,
   sortBy?: string,
-  sortOrder: "asc" | "desc" = "desc"
+  sortOrder: "asc" | "desc" = "desc",
+  searchTerm?: string
 ) => {
   const offset = (page - 1) * limit;
 
   try {
-    let baseQuery = db("subscriptions as s")
-      .leftJoin("departments as d", "s.department_id", "d.id")
-      .whereNull("s.deleted_at");
+   let baseQuery = db("subscriptions as s")
+  .leftJoin("departments as d", "s.department_id", "d.id")
+  .whereNull("s.deleted_at");
 
-    // Apply filters dynamically (AND condition)
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value.trim() !== "") {
-        const val = value.toLowerCase();
+// ✅ FIXED: Check if searchTerm is provided
+const useSearch = searchTerm && searchTerm.trim() !== "";
 
-        switch (key) {
-          case "subsc_name":
-          case "subsc_type":
-          case "subsc_currency":
-            baseQuery = baseQuery.andWhereRaw(`LOWER(s.${key}) LIKE ?`, [
-              `%${val}%`,
-            ]);
-            break;
+// ✅ IMPROVED SEARCH - Handle status more carefully
+if (useSearch) {
+  const s = searchTerm.trim().toLowerCase();
 
-          case "subsc_price":
-            baseQuery = baseQuery.andWhereRaw(
-              `CAST(s.subsc_price AS CHAR) LIKE ?`,
-              [`%${value}%`]
-            );
-            break;
+  // ✅ Check if search term is exactly "active", "inactive", or "expired"
+  // This prevents partial matches like "act" matching "active"
+  const isExactStatus = 
+    s === "active" || 
+    s === "inactive" || 
+    s === "expired"; // "expired" is UI display name for "inactive"
 
-          case "department_name":
-            baseQuery = baseQuery.andWhereRaw(`LOWER(d.deptName) LIKE ?`, [
-              `%${val}%`,
-            ]);
-            break;
+  baseQuery = baseQuery.andWhere(function () {
+    // Search across all fields
+    this.whereRaw("CAST(s.id AS CHAR) LIKE ?", [`%${s}%`])
+      .orWhereRaw("LOWER(s.subsc_name) LIKE ?", [`%${s}%`])
+      .orWhereRaw("LOWER(s.subsc_type) LIKE ?", [`%${s}%`])
+      .orWhereRaw("CAST(s.subsc_price AS CHAR) LIKE ?", [`%${s}%`])
+      .orWhereRaw("LOWER(s.subsc_currency) LIKE ?", [`%${s}%`])
+      .orWhereRaw("LOWER(d.deptName) LIKE ?", [`%${s}%`]);
 
-          case "subsc_status":
-            baseQuery = baseQuery.andWhereRaw(`LOWER(s.subsc_status) = ?`, [
-              val,
-            ]);
-            break;
-        }
+    // ✅ SPECIAL HANDLING FOR STATUS
+    if (isExactStatus) {
+      if (s === "active") {
+        this.orWhere("s.subsc_status", "=", "Active");
+      } else if (s === "inactive" || s === "expired") {
+        // Both "inactive" and "expired" should search for "Inactive" in DB
+        this.orWhere("s.subsc_status", "=", "Inactive");
       }
-    });
-
-    // Sorting
-    const ALLOWED_SORTS: Record<string, string> = {
-      id: "s.id",
-      subsc_name: "s.subsc_name",
-      subsc_type: "s.subsc_type",
-      subsc_price: "s.subsc_price",
-      subsc_currency: "s.subsc_currency",
-      subsc_status: "s.subsc_status",
-      department_name: "d.deptName",
-      created_at: "s.created_at",
-    };
-
-    if (sortBy && ALLOWED_SORTS[sortBy]) {
-      baseQuery = baseQuery.orderBy(ALLOWED_SORTS[sortBy], sortOrder);
     } else {
-      baseQuery = baseQuery.orderBy("s.created_at", "desc");
+      // If search term contains part of status word, do partial match
+      this.orWhereRaw("LOWER(s.subsc_status) LIKE ?", [`%${s}%`]);
     }
+  });
+}
+
+// Sorting
+const ALLOWED_SORTS: Record<string, string> = {
+  id: "s.id",
+  subsc_name: "s.subsc_name",
+  subsc_type: "s.subsc_type",
+  subsc_price: "s.subsc_price",
+  subsc_currency: "s.subsc_currency",
+  subsc_status: "s.subsc_status",
+  department_name: "d.deptName",
+  created_at: "s.created_at",
+};
+
+if (sortBy && ALLOWED_SORTS[sortBy]) {
+  baseQuery = baseQuery.orderBy(ALLOWED_SORTS[sortBy], sortOrder);
+} else {
+  baseQuery = baseQuery.orderBy("s.created_at", "desc");
+}
 
     // Get paginated results
     const data = await baseQuery
@@ -87,7 +91,7 @@ export const getAllSubscriptionsService = async (
         "s.subsc_type",
         "s.subsc_price",
         "s.subsc_currency",
-        "s.subsc_status", // ✅ Get status AS-IS from DB (CRON updates it)
+        "s.subsc_status",
         "s.purchase_date",
         "s.renew_date",
         "s.portal_detail",
@@ -97,14 +101,12 @@ export const getAllSubscriptionsService = async (
       .limit(limit)
       .offset(offset);
 
-    // ✅ REMOVED auto-calculation logic - just decrypt sensitive data
     const decryptedData = data.map((item) => ({
       ...item,
       portal_detail: item.portal_detail ? decrypt(item.portal_detail) : null,
       payment_method: item.payment_method ? decrypt(item.payment_method) : null,
     }));
 
-    // Count total records for pagination
     const countResult = await baseQuery
       .clone()
       .count<{ total: number }>("s.id as total");
@@ -123,12 +125,12 @@ export const getAllSubscriptionsService = async (
   }
 };
 
-// ✅ Helper function to calculate status based on renew_date
+
 export const calculateSubscriptionStatus = (
   renewDate: string | null
 ): "Active" | "Inactive" => {
   if (!renewDate) {
-    return "Active"; // If no renew date (Lifetime), keep as Active
+    return "Active"; 
   }
 
   const renewal = new Date(renewDate);
@@ -167,16 +169,8 @@ export const exportSubscriptionsCSVService = async () => {
     "Department",
     "Status",
   ];
-  // const rows = subscriptions.map((s) => [
-  //   s.id,
-  //   s.subsc_name,
-  //   s.subsc_type,
-  //   s.subsc_price,
-  //   s.subsc_currency,
-  //   s.renew_date || "-",
-  //   s.department_name || "-",
-  //   s.subsc_status,
-  // ]);
+  
+
   const rows = subscriptions.map((s, index) => [
     index + 1, //so in the exported csv i always get inc numebers.
     s.subsc_name,

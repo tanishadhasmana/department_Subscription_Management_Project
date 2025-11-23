@@ -58,7 +58,6 @@ router.get("/me", protect, getMe);
 // ----------------------------
 router.get("/", protect, requirePermission("user_list"), getAllUsers);
 router.get("/count", protect, requirePermission("user_list"), getUsersCount);
-// router.get("/:id", protect, requirePermission("user_list"), getUserById);
 
 router.post(
   "/",

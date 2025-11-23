@@ -12,7 +12,7 @@ export const encrypt = (text: string): string => {
   return iv.toString("hex") + ":" + encrypted.toString("hex");
 };
 
-// 🔓 Decrypt (safe version)
+//  Decrypt (safe version)
 export const decrypt = (text: string): string => {
   try {
     if (!text) return ""; // empty check
@@ -25,8 +25,8 @@ export const decrypt = (text: string): string => {
     const encryptedText = Buffer.from(encryptedHex, "hex");
 
     if (iv.length !== 16) {
-      console.warn("⚠️ Invalid IV length, returning original text");
-      return text; // prevent crash
+      console.warn(" Invalid IV length, returning original text");
+      return text; 
     }
 
     const decipher = crypto.createDecipheriv(algorithm, key, iv);
@@ -34,7 +34,7 @@ export const decrypt = (text: string): string => {
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return decrypted.toString("utf8");
   } catch (err: any) {
-    console.error("❌ Decryption failed:", err.message);
-    return text; // return original text safely
+    console.error(" Decryption failed:", err.message);
+    return text; 
   }
 };

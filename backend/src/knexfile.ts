@@ -12,7 +12,10 @@ const config = {
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
       // for otp update with correct time
-      timezone: "Z", // Use UTC
+      // timezone: "Z", // Use UTC
+       timezone: "+00:00",  // ← Explicit UTC timezone
+       supportBigNumbers: true,
+      bigNumberStrings: true,
     },
     migrations: {
       directory: path.resolve(__dirname, "migrations"),

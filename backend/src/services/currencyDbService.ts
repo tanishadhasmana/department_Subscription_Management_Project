@@ -1,9 +1,5 @@
 // backend/src/services/currencyDbService.ts
-import db from "../connection"; // same import style as your other services
-
-
-// perform insertion or updation, according to currency exist or not, as it has unique key on currency_code column.
-// then to convert any amt to INR, /currencyConverter.ts in utils.
+import db from "../connection"; 
 
 export async function upsertCurrencyRates(rates: Record<string, number>) {
   const entries = Object.entries(rates); // [ [code, rate], ... ]

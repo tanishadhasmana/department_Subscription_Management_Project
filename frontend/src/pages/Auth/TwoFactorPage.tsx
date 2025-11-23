@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
-interface OTPModalProps {
+interface TwoFactorProps {
   isOpen: boolean;
   onClose: () => void;
   onVerify: (otp: string) => Promise<void>;
@@ -10,7 +10,7 @@ interface OTPModalProps {
   email: string;
 }
 
-const TwoFactorPage: React.FC<OTPModalProps> = ({
+const TwoFactorPage: React.FC<TwoFactorProps> = ({
   isOpen,
   onClose,
   onVerify,

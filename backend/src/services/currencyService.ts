@@ -1,6 +1,5 @@
 // backend/src/services/currencyService.ts
 import fetch from "node-fetch"; 
-// import { config } from "process";
 
 const OXR_BASE = process.env.CURRENCY_BASE || "USD";
 const OXR_APP_ID = process.env.OPENEXCHANGE_APP_ID;
@@ -29,7 +28,6 @@ export async function fetchLatestRatesFromOXR(): Promise<CurrencyFetchResult> {
   }
   const body = (await res.json()) as any;
 
-  // body: { disclaimer, license, timestamp, base, rates: { USD:1, INR:... } }
   return {
     base: body.base || OXR_BASE,
     timestamp: body.timestamp || Date.now() / 1000,

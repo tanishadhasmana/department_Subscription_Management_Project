@@ -43,7 +43,7 @@ export const protect = async (
         .json({ message: "Server misconfiguration: missing JWT_SECRET" });
 
     const decoded = jwt.verify(token, secret) as { id: number };
-    console.log("✅ Token decoded, user ID:", decoded.id);
+    console.log("Token decoded, user ID:", decoded.id);
 
     // Fetch user info with role
     const user = await db("users")

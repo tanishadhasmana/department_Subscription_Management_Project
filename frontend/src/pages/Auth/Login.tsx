@@ -6,7 +6,7 @@ import api from "../../lib/api";
 import { useAuth } from "../../hooks/useAuth";
 import type { User } from "../../types/User";
 import { Eye, EyeOff } from "lucide-react";
-import OTPModal from "../Auth/TwoFactorPage";
+import TwoFactor from "../Auth/TwoFactorPage";
 import toast from "react-hot-toast";
 
 interface LoginForm {
@@ -204,8 +204,8 @@ const handleResendOTP = async () => {
         </form>
       </div>
 
-      {/* OTP Modal */}
-      <OTPModal
+      {/* TwoFactor */}
+      <TwoFactor
         isOpen={showOTPModal}
         onClose={() => setShowOTPModal(false)}
         onVerify={handleVerifyOTP}
