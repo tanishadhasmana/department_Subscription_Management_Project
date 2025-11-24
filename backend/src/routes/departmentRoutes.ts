@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getAllDepartments } from "../controllers/departmentController";
-import { protect } from "../middleware/authMiddleware"; // 👈 use your own middleware
+import { protect } from "../middleware/authMiddleware";
 
 const router = Router();
 

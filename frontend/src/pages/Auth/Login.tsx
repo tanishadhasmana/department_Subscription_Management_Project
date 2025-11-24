@@ -2,12 +2,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import api from "../../lib/api";
 import { useAuth } from "../../hooks/useAuth";
 import type { User } from "../../types/User";
 import { Eye, EyeOff } from "lucide-react";
 import TwoFactor from "../Auth/TwoFactorPage";
 import toast from "react-hot-toast";
+import {
+  loginRequest,
+  verifyOTPRequest,
+  resendOTPRequest,
+} from "../../services/authService";
+import { EMAIL_REGEX } from "../../components/common/regexPatterns";
 
 interface LoginForm {
   email: string;
@@ -40,7 +45,7 @@ const Login = () => {
   // Step 1: Submit credentials and trigger OTP if required
   const onSubmit = async (data: LoginForm) => {
     try {
-      const res = await api.post("/users/login", data, { withCredentials: true });
+      const res = await loginRequest(data.email, data.password);
 
       if (res.data?.requiresOTP) {
         setPendingUserId(res.data.userId ?? null);
@@ -57,66 +62,60 @@ const Login = () => {
         toast.success("Login successful!");
         navigate("/dashboard", { replace: true });
       }
-  } catch (err: unknown) {
-  let message = "Please enter valid email or password.";
+    } catch (err: unknown) {
+      let message = "Please enter valid email or password.";
 
-  // Check if it's an Axios error shape
-  if (
-    typeof err === "object" &&
-    err !== null &&
-    "response" in err &&
-    typeof (err as { response?: unknown }).response === "object"
-  ) {
-    const response = (err as { response?: { data?: { message?: unknown } } }).response;
+      // Check if it's an Axios error shape
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "response" in err &&
+        typeof (err as { response?: unknown }).response === "object"
+      ) {
+        const response = (
+          err as { response?: { data?: { message?: unknown } } }
+        ).response;
 
-    if (
-      response &&
-      typeof response.data === "object" &&
-      response.data !== null &&
-      "message" in response.data &&
-      typeof response.data.message === "string"
-    ) {
-      message = response.data.message;
+        if (
+          response &&
+          typeof response.data === "object" &&
+          response.data !== null &&
+          "message" in response.data &&
+          typeof response.data.message === "string"
+        ) {
+          message = response.data.message;
+        }
+      }
+
+      setError("email", {
+        type: "server",
+        message,
+      });
     }
-  }
-
-  setError("email", {
-    type: "server",
-    message,
-  });
-}
-
   };
 
-const handleVerifyOTP = async (otp: string) => {
-  const res = await api.post(
-    "/users/verify-otp",
-    { userId: pendingUserId, otp },
-    { withCredentials: true }
-  );
+  const handleVerifyOTP = async (otp: string) => {
+    const res = await verifyOTPRequest(pendingUserId, otp);
 
-  if (!res.data?.success || !res.data?.user) {
-    throw new Error(res.data?.message || "Verification failed");
-  }
+    if (!res.data?.success || !res.data?.user) {
+      throw new Error(res.data?.message || "Verification failed");
+    }
 
-  const backendUser: User = res.data.user;
+    const backendUser: User = res.data.user;
 
-  login({
-    ...backendUser,
-    permissions: backendUser.permissions || [],
-  });
+    login({
+      ...backendUser,
+      permissions: backendUser.permissions || [],
+    });
 
-  toast.success("Login successful!");
-  setShowOTPModal(false);
-  navigate("/dashboard", { replace: true });
-};
+    toast.success("Login successful!");
+    setShowOTPModal(false);
+    navigate("/dashboard", { replace: true });
+  };
 
-const handleResendOTP = async () => {
-  await api.post("/users/resend-otp", { userId: pendingUserId }, { withCredentials: true });
-  toast.success("New OTP sent to your email!");
-};
-
-
+  const handleResendOTP = async () => {
+    await resendOTPRequest(pendingUserId);
+  };
 
   return (
     <>
@@ -138,7 +137,13 @@ const handleResendOTP = async () => {
             Email <span className="text-red-500">*</span>
           </label>
           <input
-            {...register("email", { required: "Email is required" })}
+            {...register("email", {
+              required: "Email is required",
+              pattern: {
+                value: EMAIL_REGEX,
+                message: "Enter a valid email address",
+              },
+            })}
             className={`w-full border p-2 rounded mb-2 ${
               errors.email ? "border-red-500" : "border-gray-300"
             }`}
@@ -217,4 +222,3 @@ const handleResendOTP = async () => {
 };
 
 export default Login;
-

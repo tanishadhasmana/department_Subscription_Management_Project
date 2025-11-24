@@ -1,6 +1,8 @@
 // frontend/src/components/Auth/TwoFactorPage.tsx
 import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import { DIGITS_REGEX } from "../../components/common/regexPatterns";
+
 
 interface TwoFactorProps {
   isOpen: boolean;
@@ -50,7 +52,8 @@ const TwoFactorPage: React.FC<TwoFactorProps> = ({
   };
 
   const handleChange = (index: number, value: string) => {
-    if (value && !/^\d$/.test(value)) return;
+   if (!DIGITS_REGEX.test(value)) return;
+
 
     const arr = [...otp];
     arr[index] = value;

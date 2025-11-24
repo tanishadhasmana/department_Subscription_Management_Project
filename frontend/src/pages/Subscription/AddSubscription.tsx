@@ -3,9 +3,14 @@ import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import api from "../../lib/api";
-import { getSubscriptionById } from "../../services/subscriptionService";
+import {
+  getSubscriptionById,
+  createSubscription,
+  updateSubscription,
+} from "../../services/subscriptionService";
+import { getDepartments } from "../../services/departmentService";
 import type { Subscription } from "../../types/Subscription";
+import { URL_REGEX } from "../../components/common/regexPatterns";
 
 export const urlRegex =
   // eslint-disable-next-line no-useless-escape
@@ -84,17 +89,15 @@ const AddSubscription: React.FC = () => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get("/departments", { withCredentials: true });
-        const data = res.data.departments || res.data;
-
+        const deps = await getDepartments();
         setDepartments(
-          data.map((d: { id: number; department_name: string }) => ({
+          deps.map((d: { id: number; department_name: string }) => ({
             id: d.id,
             name: d.department_name,
           }))
         );
       } catch (err) {
-        console.error("Failed to fetch departments:", err);
+        console.log(err);
         toast.error("Failed to load departments");
       }
     })();
@@ -152,43 +155,25 @@ const AddSubscription: React.FC = () => {
   }, [editing, id, departments, setValue]);
 
   const onSubmit = async (formData: SubscriptionFormData) => {
-    console.log(" === FORM SUBMISSION STARTED ===");
-    console.log("Form data:", formData);
-
     try {
       if (editing && id) {
-        // console.log("📝 Editing mode - ID:", id);
-        await api.put(`/subscriptions/${id}`, formData, {
-          withCredentials: true,
-        });
-        console.log("✅ Update successful");
+        await updateSubscription(Number(id), formData);
         toast.success("Subscription updated successfully");
-        nav("/subscription");
-        return;
+      } else {
+        await createSubscription(formData);
+        toast.success("Subscription created successfully");
       }
 
-      console.log("➕ Creating new subscription...");
-      const response = await api.post("/subscriptions", formData, {
-        withCredentials: true,
-      });
-      console.log("Create successful:", response);
-      toast.success("Subscription created successfully");
       nav("/subscription");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.log("❌ ERROR:", error);
-
       const backendMsg = error?.response?.data?.message;
       const fallbackMsg =
         error?.response?.data?.error ||
         error?.message ||
         "Failed to save subscription";
 
-      const finalMsg = backendMsg || fallbackMsg;
-
-      setTimeout(() => {
-        toast.error(finalMsg);
-      }, 10);
+      toast.error(backendMsg || fallbackMsg);
     }
   };
 
@@ -222,14 +207,19 @@ const AddSubscription: React.FC = () => {
                 <input
                   {...register("subsc_name", {
                     required: "Name is required",
-                    maxLength: { value: 50, message: "Max 50 characters allowed" },
-                    minLength: { value: 3, message: "Minimum 3 characters required" },
+                    maxLength: {
+                      value: 50,
+                      message: "Max 50 characters allowed",
+                    },
+                    minLength: {
+                      value: 3,
+                      message: "Minimum 3 characters required",
+                    },
                     validate: (v) =>
                       v.trim().length > 0 ||
                       "Name cannot start with spaces or be empty",
                   })}
                   onBlur={() => trigger("subsc_name")}
-
                   onChange={(e) => {
                     let v = e.target.value;
                     if (v.startsWith(" ")) {
@@ -265,9 +255,10 @@ const AddSubscription: React.FC = () => {
                       message: "Max 200 characters allowed",
                     },
                     validate: (v) =>
-                      (v?.trim().length ?? 0) > 0 || "URL cannot start with spaces",
+                      (v?.trim().length ?? 0) > 0 ||
+                      "URL cannot start with spaces",
                     pattern: {
-                      value: urlRegex,
+                      value: URL_REGEX,
                       message:
                         "Enter a valid URL (must start with http:// or https://)",
                     },
@@ -429,7 +420,9 @@ const AddSubscription: React.FC = () => {
                   type="date"
                   {...register("renew_date", {
                     required:
-                      watchedType === "Lifetime" ? false : "Renew date is required",
+                      watchedType === "Lifetime"
+                        ? false
+                        : "Renew date is required",
                   })}
                   disabled={true}
                   className={`w-full px-4 py-3 border rounded-lg transition-all focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
@@ -451,8 +444,14 @@ const AddSubscription: React.FC = () => {
                 <textarea
                   {...register("payment_method", {
                     required: "Payment method is required",
-                   minLength: { value: 5, message: "Minimum 5 characters required" },
-                    maxLength: { value: 100, message: "Max 100 characters allowed" },
+                    minLength: {
+                      value: 5,
+                      message: "Minimum 5 characters required",
+                    },
+                    maxLength: {
+                      value: 100,
+                      message: "Max 100 characters allowed",
+                    },
                     validate: (v) =>
                       v.trim().length > 0 ||
                       "Payment method cannot start with spaces",
@@ -514,7 +513,6 @@ const AddSubscription: React.FC = () => {
                 )}
               </div>
 
-
               {/* Portal Details */}
               <div className="md:col-span-2 space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
@@ -523,7 +521,10 @@ const AddSubscription: React.FC = () => {
                 <textarea
                   {...register("portal_detail", {
                     required: "Portal details are required",
-                   minLength: { value: 5, message: "Minimum 5 characters required" },
+                    minLength: {
+                      value: 5,
+                      message: "Minimum 5 characters required",
+                    },
                     maxLength: {
                       value: 200,
                       message: "Max 200 characters allowed",
@@ -568,7 +569,9 @@ const AddSubscription: React.FC = () => {
                 onClick={() => nav("/subscription")}
                 disabled={isSubmitting}
                 className={`px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium ${
-                  isSubmitting ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                  isSubmitting
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer"
                 }`}
               >
                 Cancel
@@ -593,6 +596,3 @@ const AddSubscription: React.FC = () => {
 };
 
 export default AddSubscription;
-
-
-

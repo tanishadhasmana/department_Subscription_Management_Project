@@ -2,9 +2,10 @@
 import db from "../connection"; 
 
 export async function upsertCurrencyRates(rates: Record<string, number>) {
-  const entries = Object.entries(rates); // [ [code, rate], ... ]
+  // converting obj into array
+  const entries = Object.entries(rates); // [ [code, rate], ... ], if no entries stop
   if (entries.length === 0) return;
-
+// transaction is used to run grp of operations together, if all succeed commit, else rollback, and trx is transaction obj, either can be use anything
   await db.transaction(async (trx) => {
     for (const [currency_code, exchange_rate] of entries) {
       await trx("currency_rates")
@@ -13,6 +14,7 @@ export async function upsertCurrencyRates(rates: Record<string, number>) {
           exchange_rate: Number(exchange_rate),
           updated_at: trx.fn.now(),
         })
+        // if same curreny code already exist, then update that instead of inserting 
         .onConflict("currency_code")
         .merge({
           exchange_rate: Number(exchange_rate),

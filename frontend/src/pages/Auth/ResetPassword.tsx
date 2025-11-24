@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import api from "../../lib/api";
+import { resetPassword } from "../../services/authService";
+
 import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -44,7 +45,7 @@ const ResetPassword: React.FC = () => {
     setError("");
 
     try {
-      await api.post("/password/reset-password", { token, newPassword });
+      await resetPassword(token, newPassword);
       toast.success("Password reset successfully!");
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {

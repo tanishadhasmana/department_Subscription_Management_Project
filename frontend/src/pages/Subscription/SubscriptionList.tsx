@@ -188,7 +188,6 @@ const SubscriptionList: React.FC = () => {
     loadSubscriptions(currentPage);
   }, [currentPage, limit, sortBy, sortOrder, loadSubscriptions]);
 
-
   // ==================== RENDER COMPONENTS ====================
 
   const SortArrow = ({ column }: { column: string }) => (
@@ -234,7 +233,9 @@ const SubscriptionList: React.FC = () => {
                 type="text"
                 placeholder="Search"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) =>
+                  setSearchTerm(e.target.value.replace(/^\s+/, ""))
+                }
                 onKeyPress={handleSearchKeyPress}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />

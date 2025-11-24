@@ -10,14 +10,20 @@ export const getLatestRates = async (req: Request, res: Response) => {
     // if DB empty, try to fetch directly 
     if (!rates || Object.keys(rates).length === 0) {
       try {
+        // calling API for fetching data
         const fetched = await fetchLatestRatesFromOXR();
-        return res.status(200).json({ success: true, source: "remote", rates: fetched.rates, base: fetched.base });
+        return res.status(200).json({ 
+          success: true, 
+          // remote means data is comming from internet
+          source: "remote", rates: fetched.rates, base: fetched.base });
       } catch (err) {
         console.log(err);
         
       }
     }
-    return res.status(200).json({ success: true, source: "db", rates, base: process.env.CURRENCY_BASE || "USD" });
+    return res.status(200).json({ 
+      // res generating from db
+      success: true, source: "db", rates, base: process.env.CURRENCY_BASE || "USD" });
   } catch (err: any) {
     console.error("getLatestRates error:", err);
     return res.status(500).json({ success: false, message: err.message || "Failed to get rates" });
@@ -32,6 +38,7 @@ await upsertCurrencyRates(rates);
 return res.status(200).json({
   success: true,
   message: "Currency rates updated successfully",
+  // no of currencies
   count: Object.keys(rates).length,
 });
 

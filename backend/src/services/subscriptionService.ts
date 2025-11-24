@@ -91,6 +91,7 @@ export const getAllSubscriptionsService = async (
 
     // Get paginated results
     const data = await baseQuery
+    // if we use clone we make copy of query do not use or modify that original query so it reamin the same.
       .clone()
       .select(
         "s.id",
