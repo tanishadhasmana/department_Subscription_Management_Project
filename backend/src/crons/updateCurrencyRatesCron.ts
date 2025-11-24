@@ -3,15 +3,13 @@ import cron from "node-cron";
 import { fetchLatestRatesFromOXR } from "../services/currencyService";
 import { upsertCurrencyRates } from "../services/currencyDbService";
 
-const CRON_EXPR = process.env.CURRENCY_UPDATE_CRON || "0 3 * * *"; // default 03:00 daily
+const CRON_EXPR = process.env.CURRENCY_UPDATE_CRON || "0 3 * * *";
 
 export function startCurrencyUpdateCron() {
   console.log(`[cron] currency update cron configured: ${CRON_EXPR}`);
-  // schedule (will not run immediately, only at times matched).
   const task = cron.schedule(CRON_EXPR, async () => {
     console.log("[cron] Starting currency update job...");
     try {
-        // given name acc to the library we used openexchangerates
       const { rates } = await fetchLatestRatesFromOXR();
       await upsertCurrencyRates(rates);
       console.log("[cron] Currency rates updated:", Object.keys(rates).length, "entries");
@@ -20,7 +18,6 @@ export function startCurrencyUpdateCron() {
     }
   });
 
-  // also give a helper to run once on start (optional)
   (task as any).runNow = async () => {
     console.log("[cron] Running currency update (manual run)...");
     try {

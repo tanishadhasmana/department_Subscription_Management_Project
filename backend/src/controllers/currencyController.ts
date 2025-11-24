@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 import { getAllRates } from "../services/currencyDbService";
 import { fetchLatestRatesFromOXR } from "../services/currencyService";
 import { upsertCurrencyRates } from "../services/currencyDbService";
-import { log } from "console";
 
 export const getLatestRates = async (req: Request, res: Response) => {
   try {
