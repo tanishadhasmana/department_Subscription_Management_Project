@@ -278,7 +278,7 @@ const Dashboard: React.FC = () => {
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="inactive">Expired</option>
             </select>
           </div>
         </div>
