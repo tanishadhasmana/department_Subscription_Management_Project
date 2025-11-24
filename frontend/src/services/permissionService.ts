@@ -8,5 +8,5 @@ export const getAllPermissions = async (): Promise<PermissionItem[]> => {
 
 export const getRolePermissions = async (roleId: number): Promise<number[]> => {
   const res = await api.get(`/permissions/role/${roleId}`);
-  return res.data; // should be number[]
+  return res.data; 
 };

@@ -58,7 +58,6 @@ async function normalizePriceToINR(
   return { monthlyEquivalentINR, oneTimeINR, amountInINR };
 }
 
-// ✅ FIX: This function was NOT excluding soft-deleted records!
 function applyCommonFilters(
   query: any,
   filters: DashboardFilters,
@@ -66,7 +65,7 @@ function applyCommonFilters(
   applyDate = true,
   dateColumn = "s.created_at"
 ) {
-  // ✅ CRITICAL FIX: Always exclude soft-deleted records
+  
   let q = query.whereNull("s.deleted_at");
 
   if (filters.departments && filters.departments.length > 0) {
@@ -411,7 +410,7 @@ export const getDashboardMetricsService = async (filters: DashboardFilters) => {
     count: Number(r.count || 0),
   }));
 
-  // ✅ FIXED: Detailed recent subscriptions - now properly excludes soft-deleted
+ 
   const detailedDataRaw = await applyCommonFilters(
     db("subscriptions as s").leftJoin(
       "departments as d",
@@ -437,7 +436,7 @@ export const getDashboardMetricsService = async (filters: DashboardFilters) => {
     id: d.id,
     subsc_name: d.subsc_name,
     department_name: d.department_name || "N/A",
-    renew_date: d.renew_date || d.created_at || null,
+    renew_date: d.renew_date || null,
     subsc_status: d.subsc_status,
   }));
 
@@ -494,6 +493,3 @@ export const getDashboardMetricsService = async (filters: DashboardFilters) => {
     detailedData,
   };
 };
-
-
-

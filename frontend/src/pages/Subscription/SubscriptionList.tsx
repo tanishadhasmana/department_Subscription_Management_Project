@@ -188,16 +188,6 @@ const SubscriptionList: React.FC = () => {
     loadSubscriptions(currentPage);
   }, [currentPage, limit, sortBy, sortOrder, loadSubscriptions]);
 
-  /**
-   * Load subscriptions when search term changes (with Enter/Button)
-   */
-  useEffect(() => {
-    if (currentPage === 1) {
-      loadSubscriptions(1);
-    } else {
-      setCurrentPage(1);
-    }
-  }, [searchTerm]);
 
   // ==================== RENDER COMPONENTS ====================
 

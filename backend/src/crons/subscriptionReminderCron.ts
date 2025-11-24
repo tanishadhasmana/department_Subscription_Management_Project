@@ -78,7 +78,7 @@ export const checkAndSendReminders = async () => {
       const daysUntilExpiry = calculateDaysUntilExpiry(subscription.renew_date);
 
       console.log(
-        `📅 Subscription: ${subscription.subsc_name} | Days until expiry: ${daysUntilExpiry}`
+        ` Subscription: ${subscription.subsc_name} | Days until expiry: ${daysUntilExpiry}`
       );
 
       if (reminders.includes(daysUntilExpiry)) {
@@ -97,7 +97,7 @@ export const checkAndSendReminders = async () => {
       
       if (subs.length === 0) continue;
 
-      console.log(`📧 Sending ${days}-day reminder for ${subs.length} subscription(s)`);
+      console.log(` Sending ${days}-day reminder for ${subs.length} subscription(s)`);
 
       // Group subscriptions by department
       const departmentGroups: { [key: string]: GroupedSubscription[] } = {};
@@ -134,7 +134,7 @@ export const checkAndSendReminders = async () => {
         });
 
         emailsSent++;
-        console.log(`✅ Grouped email sent successfully for ${days}-day reminder`);
+        console.log(` Grouped email sent successfully for ${days}-day reminder`);
       } catch (error: any) {
         console.error(
           `❌ Failed to send grouped email for ${days}-day reminder:`,
@@ -153,13 +153,13 @@ export const checkAndSendReminders = async () => {
 
 export const startSubscriptionReminderCron = () => {
   cron.schedule("0 9 * * *", async () => {
-    console.log("⏰ Running scheduled subscription reminder check...");
+    console.log("Running scheduled subscription reminder check...");
     await checkAndSendReminders();
   }, {
     timezone: "Asia/Kolkata",
   });
 
-  console.log("⏰ Subscription reminder cron job started (runs daily at 9:00 AM IST)");
+  console.log("Subscription reminder cron job started (runs daily at 9:00 AM IST)");
   
   checkAndSendReminders();
 }

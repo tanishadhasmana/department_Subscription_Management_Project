@@ -152,12 +152,12 @@ const AddSubscription: React.FC = () => {
   }, [editing, id, departments, setValue]);
 
   const onSubmit = async (formData: SubscriptionFormData) => {
-    console.log("🚀 === FORM SUBMISSION STARTED ===");
+    console.log(" === FORM SUBMISSION STARTED ===");
     console.log("Form data:", formData);
 
     try {
       if (editing && id) {
-        console.log("📝 Editing mode - ID:", id);
+        // console.log("📝 Editing mode - ID:", id);
         await api.put(`/subscriptions/${id}`, formData, {
           withCredentials: true,
         });
@@ -431,7 +431,6 @@ const AddSubscription: React.FC = () => {
                     required:
                       watchedType === "Lifetime" ? false : "Renew date is required",
                   })}
-                  // disabled={watchedType === "Lifetime"}
                   disabled={true}
                   className={`w-full px-4 py-3 border rounded-lg transition-all focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
                     errors.renew_date ? "border-red-500" : "border-gray-300"

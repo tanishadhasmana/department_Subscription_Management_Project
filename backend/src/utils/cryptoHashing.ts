@@ -3,7 +3,7 @@ import crypto from "crypto";
 const algorithm = process.env.ENCRYPTION_ALGORITHM || "aes-256-cbc";
 const key = Buffer.from(process.env.ENCRYPTION_KEY || "defaultsecretkeydefaultsecretkey!!", "utf8");
 
-// 🔒 Encrypt
+//  Encrypt
 export const encrypt = (text: string): string => {
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(algorithm, key, iv);

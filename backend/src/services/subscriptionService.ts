@@ -1,5 +1,6 @@
 import db from "../../src/connection";
 import { encrypt, decrypt } from "../utils/cryptoHashing";
+
 /**
  * Get total subscription count
  */
@@ -10,9 +11,11 @@ export const getSubscriptionsCountService = async (): Promise<number> => {
   return Number(result?.[0]?.total ?? 0);
 };
 
-
+/**
+ * Get all subscriptions
+ */
 export const getAllSubscriptionsService = async (
-   page: number,
+  page: number,
   limit: number,
   filters: Record<string, string | undefined>,
   sortBy?: string,
@@ -22,65 +25,69 @@ export const getAllSubscriptionsService = async (
   const offset = (page - 1) * limit;
 
   try {
-   let baseQuery = db("subscriptions as s")
-  .leftJoin("departments as d", "s.department_id", "d.id")
-  .whereNull("s.deleted_at");
+    let baseQuery = db("subscriptions as s")
+      .leftJoin("departments as d", "s.department_id", "d.id")
+      .whereNull("s.deleted_at");
 
-// ✅ FIXED: Check if searchTerm is provided
-const useSearch = searchTerm && searchTerm.trim() !== "";
+    
+    const useSearch = searchTerm && searchTerm.trim() !== "";
 
-// ✅ IMPROVED SEARCH - Handle status more carefully
-if (useSearch) {
-  const s = searchTerm.trim().toLowerCase();
+   
+    if (useSearch) {
+      const s = searchTerm.trim().toLowerCase();
 
-  // ✅ Check if search term is exactly "active", "inactive", or "expired"
-  // This prevents partial matches like "act" matching "active"
-  const isExactStatus = 
-    s === "active" || 
-    s === "inactive" || 
-    s === "expired"; // "expired" is UI display name for "inactive"
+      baseQuery = baseQuery.andWhere(function () {
+        //  Search subscription name
+        this.whereRaw("LOWER(s.subsc_name) LIKE ?", [`%${s}%`])
+          //  Search subscription type
+          .orWhereRaw("LOWER(s.subsc_type) LIKE ?", [`%${s}%`])
+          //  Search price 
+          .orWhereRaw("CAST(s.subsc_price AS CHAR) LIKE ?", [`%${s}%`])
+          //  Search currency
+          .orWhereRaw("LOWER(s.subsc_currency) LIKE ?", [`%${s}%`])
+          //  Search department name
+          .orWhereRaw("LOWER(d.deptName) LIKE ?", [`%${s}%`]);
 
-  baseQuery = baseQuery.andWhere(function () {
-    // Search across all fields
-    this.whereRaw("CAST(s.id AS CHAR) LIKE ?", [`%${s}%`])
-      .orWhereRaw("LOWER(s.subsc_name) LIKE ?", [`%${s}%`])
-      .orWhereRaw("LOWER(s.subsc_type) LIKE ?", [`%${s}%`])
-      .orWhereRaw("CAST(s.subsc_price AS CHAR) LIKE ?", [`%${s}%`])
-      .orWhereRaw("LOWER(s.subsc_currency) LIKE ?", [`%${s}%`])
-      .orWhereRaw("LOWER(d.deptName) LIKE ?", [`%${s}%`]);
-
-    // ✅ SPECIAL HANDLING FOR STATUS
-    if (isExactStatus) {
-      if (s === "active") {
-        this.orWhere("s.subsc_status", "=", "Active");
-      } else if (s === "inactive" || s === "expired") {
-        // Both "inactive" and "expired" should search for "Inactive" in DB
-        this.orWhere("s.subsc_status", "=", "Inactive");
-      }
-    } else {
-      // If search term contains part of status word, do partial match
-      this.orWhereRaw("LOWER(s.subsc_status) LIKE ?", [`%${s}%`]);
+        //  SMART STATUS HANDLING
+        if (s === "active") {
+          this.orWhere("s.subsc_status", "=", "Active");
+        } else if (s === "inactive" || s === "expired") {
+          this.orWhere("s.subsc_status", "=", "Inactive");
+        } else if (s.startsWith("ex")) {
+          // Handles: ex, exp, expi, expir, expired
+          this.orWhere("s.subsc_status", "=", "Inactive");
+        } else if (s.startsWith("inac")) {
+          // Handles: inac, inact, inactiv, inactive
+          this.orWhere("s.subsc_status", "=", "Inactive");
+        } else if (s.startsWith("ac")) {
+          // Handles: ac, act, acti, activ, active
+          this.orWhere("s.subsc_status", "=", "Active");
+        } else if (s === "in") {
+          this.orWhere("s.subsc_status", "=", "Inactive");
+        } else {
+          // Fallback for any other partial status match
+          this.orWhereRaw("LOWER(s.subsc_status) LIKE ?", [`%${s}%`]);
+        }
+      });
     }
-  });
-}
 
-// Sorting
-const ALLOWED_SORTS: Record<string, string> = {
-  id: "s.id",
-  subsc_name: "s.subsc_name",
-  subsc_type: "s.subsc_type",
-  subsc_price: "s.subsc_price",
-  subsc_currency: "s.subsc_currency",
-  subsc_status: "s.subsc_status",
-  department_name: "d.deptName",
-  created_at: "s.created_at",
-};
+    // Sorting
+    const ALLOWED_SORTS: Record<string, string> = {
+      id: "s.id",
+      subsc_name: "s.subsc_name",
+      subsc_type: "s.subsc_type",
+      subsc_price: "s.subsc_price",
+      subsc_currency: "s.subsc_currency",
+      subsc_status: "s.subsc_status",
+      department_name: "d.deptName",
+      created_at: "s.created_at",
+    };
 
-if (sortBy && ALLOWED_SORTS[sortBy]) {
-  baseQuery = baseQuery.orderBy(ALLOWED_SORTS[sortBy], sortOrder);
-} else {
-  baseQuery = baseQuery.orderBy("s.created_at", "desc");
-}
+    if (sortBy && ALLOWED_SORTS[sortBy]) {
+      baseQuery = baseQuery.orderBy(ALLOWED_SORTS[sortBy], sortOrder);
+    } else {
+      baseQuery = baseQuery.orderBy("s.created_at", "desc");
+    }
 
     // Get paginated results
     const data = await baseQuery
@@ -126,11 +133,14 @@ if (sortBy && ALLOWED_SORTS[sortBy]) {
 };
 
 
+/**
+ * Calculate subscription status based on renew date
+ */
 export const calculateSubscriptionStatus = (
   renewDate: string | null
 ): "Active" | "Inactive" => {
   if (!renewDate) {
-    return "Active"; 
+    return "Active";
   }
 
   const renewal = new Date(renewDate);
@@ -169,10 +179,9 @@ export const exportSubscriptionsCSVService = async () => {
     "Department",
     "Status",
   ];
-  
 
   const rows = subscriptions.map((s, index) => [
-    index + 1, //so in the exported csv i always get inc numebers.
+    index + 1,
     s.subsc_name,
     s.subsc_type,
     s.subsc_price,
@@ -227,7 +236,6 @@ export const getSubscriptionByIdService = async (id: number) => {
 /**
  * Create a new subscription
  */
-
 export const createSubscriptionService = async (data: any) => {
   const existing = await db("subscriptions")
     .where({
@@ -306,7 +314,6 @@ export const updateSubscriptionService = async (id: number, data: any) => {
     updated_at: db.fn.now(),
   };
 
-  // purchase_date cannot be null, so only update if valid
   if (data.purchase_date && data.purchase_date.trim() !== "") {
     updateData.purchase_date = data.purchase_date;
   }

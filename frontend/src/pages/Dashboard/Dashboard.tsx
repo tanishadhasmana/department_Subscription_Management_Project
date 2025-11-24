@@ -77,6 +77,11 @@ const Dashboard: React.FC = () => {
     setStatus("all");
   };
 
+  // helper like to show expired instead of inactive.
+  const formatStatus = (status: string): string => {
+    return status === "Inactive" ? "Expired" : status;
+  };
+
   const loadDepartments = async () => {
     try {
       const data = await getAllDepartments();
@@ -122,14 +127,12 @@ const Dashboard: React.FC = () => {
   };
 
   // date formatting function
-  const formatDateTime = (isoString: string): string => {
-    if (!isoString) return "";
+  const formatDateTime = (isoString: string | null): string => {
+      if (!isoString || isoString.trim() === "") return "-";
 
     // try to create a Date. If invalid, return the original string
     const date = new Date(isoString);
     if (isNaN(date.getTime())) {
-      // sometimes backend already returns 'YYYY-MM-DD' or other formats.
-      // if Date parsing fails, return the input as-is (safer than "Invalid Date")
       return String(isoString);
     }
 
@@ -434,7 +437,6 @@ const Dashboard: React.FC = () => {
                 outerRadius={110}
                 labelLine={false}
                 dataKey="total_spend"
-                // 👉 Correct typed label
                 label={(props) => {
                   const item = props.payload as DeptSpendItem;
 
@@ -579,7 +581,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Detailed Table Preview */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">
             Recent Subscriptions
@@ -618,11 +620,9 @@ const Dashboard: React.FC = () => {
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {item.department_name}
                   </td>
-
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {formatDateTime(item.renew_date)}
                   </td>
-
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -631,7 +631,7 @@ const Dashboard: React.FC = () => {
                           : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {item.subsc_status}
+                      {formatStatus(item.subsc_status)}
                     </span>
                   </td>
                 </tr>
@@ -640,6 +640,8 @@ const Dashboard: React.FC = () => {
           </table>
         </div>
       </div>
+
+
     </div>
   );
 };

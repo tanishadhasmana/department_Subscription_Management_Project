@@ -35,7 +35,7 @@ dotenv.config();
 const app: Application = express();
 
 /* ---------------------------
-   🧱 Core Middleware Setup
+    Core Middleware Setup
 ---------------------------- */
 app.use(cookieParser());
 app.use(
@@ -63,7 +63,7 @@ app.use(
 );
 
 /* ---------------------------
-   🧱 Static Files
+    Static Files
 ---------------------------- */
 // app.use(
 //   "/assets/images",
@@ -71,7 +71,7 @@ app.use(
 // );
 
 /* ---------------------------
-   🧱 Rate Limiter
+    Rate Limiter
 ---------------------------- */
 const authLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -80,14 +80,14 @@ const authLimiter = rateLimit({
 });
 
 /* ---------------------------
-   🧱 Health Check
+    Health Check
 ---------------------------- */
 app.get("/", (req: Request, res: Response) => {
   res.send("Department Subscription Backend Running");
 });
 
 /* ---------------------------
-   🧱 Mount Routes
+    Mount Routes
 ---------------------------- */
 app.use("/api/currency", currencyRoute);
 app.use("/api/dashboard", dashboardRoute);
@@ -103,30 +103,30 @@ const PORT = process.env.PORT || 3002;
 
 (async () => {
   const result = await db.raw("SELECT DATABASE() as db");
-  console.log("🔥 BACKEND IS USING DATABASE:", result[0][0].db);
+  console.log(" BACKEND IS USING DATABASE:", result[0][0].db);
 })();
 
 app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);
 
-  // ✅ Test email connection on startup
+  //  Test email connection on startup
   console.log("\n📧 Testing email connection...");
   const emailReady = await testEmailConnection();
 
   if (emailReady) {
-    console.log("✅ Email system ready\n");
+    console.log(" Email system ready\n");
     // Start the subscription reminder cron job--9 AM
     startSubscriptionReminderCron();
   } else {
     console.log(
-      "⚠️  Email system not ready. Please check your .env configuration.\n"
+      "  Email system not ready. Please check your .env configuration.\n"
     );
   }
-  console.log("\n🔁 Starting currency update cron...");
+  console.log("\n Starting currency update cron...");
   startCurrencyUpdateCron();
 
 
-   console.log("\n🔄 Starting subscription status update cron...");
+   console.log("\n Starting subscription status update cron...");
   startSubscriptionStatusUpdateCron();
 
 });

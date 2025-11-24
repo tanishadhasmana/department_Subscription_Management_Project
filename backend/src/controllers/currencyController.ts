@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { getAllRates } from "../services/currencyDbService";
 import { fetchLatestRatesFromOXR } from "../services/currencyService";
 import { upsertCurrencyRates } from "../services/currencyDbService";
+import { log } from "console";
 
 export const getLatestRates = async (req: Request, res: Response) => {
   try {
@@ -13,7 +14,8 @@ export const getLatestRates = async (req: Request, res: Response) => {
         const fetched = await fetchLatestRatesFromOXR();
         return res.status(200).json({ success: true, source: "remote", rates: fetched.rates, base: fetched.base });
       } catch (err) {
-        // swallow and continue returning empty
+        console.log(err);
+        
       }
     }
     return res.status(200).json({ success: true, source: "db", rates, base: process.env.CURRENCY_BASE || "USD" });

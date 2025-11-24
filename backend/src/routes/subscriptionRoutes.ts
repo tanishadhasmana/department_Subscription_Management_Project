@@ -15,7 +15,7 @@ import { protect, requirePermission } from "../middleware/authMiddleware";
 const router = express.Router();
 
 // ----------------------------
-// 📊 Subscription Management Routes
+// Subscription Management Routes
 // ----------------------------
 router.get("/", protect, requirePermission("subscription_list"), getAllSubscriptions);
 router.get("/count", protect, requirePermission("subscription_list"), getSubscriptionsCount);
