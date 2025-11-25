@@ -5,13 +5,16 @@ import { responseMessage } from "../utils/responseMessage";
 export const getAllDepartments = async (req: Request, res: Response) => {
   try {
     const departments = await getAllDepartmentsService();
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: responseMessage.fetched("Departments"),
-      departments,
+      message: responseMessage.department.fetchSuccess,
+      data: departments
     });
   } catch (err: any) {
     console.error("Failed to fetch departments:", err);
-    res.status(500).json({ message: err.message || "Failed to fetch departments" });
+     return res.status(500).json({
+      success: false,
+      message: err.message || responseMessage.error("departments")
+    });
   }
 };

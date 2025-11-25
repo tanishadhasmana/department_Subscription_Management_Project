@@ -1,13 +1,13 @@
-// app.ts
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-// import path from "path";
 import cookieParser from "cookie-parser";
 import db from "./src/connection"
 
+// CRITICAL: Set timezone BEFORE importing cron jobs
+process.env.TZ = 'Asia/Kolkata';
 
 import dashboardRoute from "./src/routes/dashboardRoute";
 import userRoute from "./src/routes/userRoutes";
@@ -16,19 +16,10 @@ import departmentRoute from "./src/routes/departmentRoutes";
 import passwordRoute from "./src/routes/passwordRoutes";
 import currencyRoute from "./src/routes/currencyRoutes";
 
-//  Import cron job starter
 import { startSubscriptionReminderCron } from "./src/crons/subscriptionReminderCron";
 import { startSubscriptionStatusUpdateCron } from "./src/crons/subscriptionStatusUpdateCron";
 import { testEmailConnection } from "./src/utils/mailer";
 import { startCurrencyUpdateCron } from "./src/crons/updateCurrencyRatesCron";
-
-
-// to get the latst rates -- GET http://localhost:3002/api/currency/latest
-
-// to manually update rates -- GET http://localhost:3002/api/currency/update , means fetching through API now.
-
-
-
 
 dotenv.config();
 
@@ -55,7 +46,6 @@ app.use(
 );
 
 app.use(express.json());
-
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -63,18 +53,10 @@ app.use(
 );
 
 /* ---------------------------
-    Static Files
----------------------------- */
-// app.use(
-//   "/assets/images",
-//   express.static(path.resolve(__dirname, "assets/images"))
-// );
-
-/* ---------------------------
     Rate Limiter
 ---------------------------- */
 const authLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   max: 10,
   message: "Too many requests, please try again later.",
 });
@@ -108,25 +90,31 @@ const PORT = process.env.PORT || 3002;
 
 app.listen(PORT, async () => {
   console.log(`Server running at http://localhost:${PORT}`);
+  console.log(` Timezone: ${process.env.TZ || 'system default'}`);
+  console.log(` Server time: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST\n`);
 
-  //  Test email connection on startup
-  console.log("\n📧 Testing email connection...");
+  console.log(" Testing email connection...");
   const emailReady = await testEmailConnection();
 
   if (emailReady) {
     console.log(" Email system ready\n");
-    // Start the subscription reminder cron job--9 AM
     startSubscriptionReminderCron();
   } else {
-    console.log(
-      "  Email system not ready. Please check your .env configuration.\n"
-    );
+    console.log("  Email system not ready. Please check your .env configuration.\n");
   }
+
   console.log("\n Starting currency update cron...");
   startCurrencyUpdateCron();
 
-
-   console.log("\n Starting subscription status update cron...");
+  console.log("\n Starting subscription status update cron...");
   startSubscriptionStatusUpdateCron();
-
+  
+  console.log("\n All cron jobs initialized successfully!\n");
 });
+
+export default app;
+
+
+
+
+

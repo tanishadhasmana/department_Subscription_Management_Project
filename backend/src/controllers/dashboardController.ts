@@ -16,17 +16,16 @@ export const getDashboardMetrics = async (req: Request, res: Response) => {
     };
 
     const metrics = await getDashboardMetricsService(filters);
-
-    res.status(200).json({
+     return res.status(200).json({
       success: true,
-      message: responseMessage.fetched("Dashboard metrics"),
-      data: metrics,
+      message: responseMessage.dashboard.metricsFetched,
+      data: metrics
     });
   } catch (err: any) {
     console.error("Failed to fetch dashboard metrics:", err);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: err?.message || responseMessage.error("Dashboard metrics"),
+      message: err.message || responseMessage.error("dashboard metrics")
     });
   }
 };

@@ -64,10 +64,19 @@ export const createFirstAdmin = async (req: Request, res: Response) => {
 export const getUsersCount = async (req: Request, res: Response) => {
   try {
     const total = await getUsersCountService();
-    res.status(200).json({ total });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: responseMessage.user.countFetched,
+        data: { total },
+      });
   } catch (err: any) {
     console.error("Failed to get users count:", err);
-    res.status(500).json({ message: err.message || "Failed to get users count" });
+    res.status(500).json({
+      success: false,
+      message: err.message || responseMessage.error("users count"),
+    });
   }
 };
 
@@ -93,11 +102,20 @@ export const getAllUsers = async (req: Request, res: Response) => {
       order,
       true
     );
-
-    res.status(200).json(result);
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.user.fetchSuccess,
+      data: result.users,
+      total: result.total,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+    });
   } catch (err: any) {
     console.error("getAllUsers error:", err);
-    res.status(500).json(responseMessage.error("fetch users"));
+    return res.status(500).json({
+      success: false,
+      message: err.message || responseMessage.error("users"),
+    });
   }
 };
 
@@ -134,9 +152,16 @@ export const createUser = async (req: Request, res: Response) => {
       .then(() => console.log("Welcome email sent to:", user.email))
       .catch((err) => console.error("Failed to send email:", err));
 
-    res.status(201).json({ user, tempPassword });
+    return res.status(201).json({
+      success: true,
+      message: responseMessage.user.createSuccess,
+      data: { user, tempPassword }
+    });
   } catch (err: any) {
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({
+      success: false,
+      message: err.message || responseMessage.error("user")
+    });
   }
 };
 
@@ -146,7 +171,8 @@ export const createUser = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
   try {
     const userId = Number(req.params.id);
-    if (isNaN(userId)) return res.status(400).json(validationMessage.invalid("user ID"));
+    if (isNaN(userId))
+      return res.status(400).json(validationMessage.invalid("user ID"));
 
     const updateData = {
       first_name: req.body.first_name,
@@ -158,10 +184,17 @@ export const updateUser = async (req: Request, res: Response) => {
     };
 
     const updatedUser = await updateUserService(userId, updateData);
-    res.status(200).json(updatedUser);
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.user.updateSuccess,
+      data: updatedUser
+    });
   } catch (err: any) {
     console.error("Update user error:", err);
-    res.status(500).json({ message: err.message || "Something went wrong" });
+    return res.status(500).json({
+      success: false,
+      message: err.message || responseMessage.error("user")
+    });
   }
 };
 
@@ -188,7 +221,9 @@ export const loginUser = async (req: Request, res: Response) => {
     console.log(`[LOGIN] Attempting login for email: ${email}`);
     // Validate credentials (from service)
     const user = await loginUserService(email, password);
-     console.log(`[LOGIN] User validated successfully: ${user.email} (ID: ${user.id})`);
+    console.log(
+      `[LOGIN] User validated successfully: ${user.email} (ID: ${user.id})`
+    );
     // Generate OTP (from service)
     const otp = await generateAndStoreOTP(user.id);
     console.log(`[LOGIN] OTP generated successfully: ${otp}`);
@@ -215,18 +250,23 @@ export const loginUser = async (req: Request, res: Response) => {
     `;
 
     await sendMail(user.email, subject, `Your OTP is: ${otp}`, html);
-        console.log(`[LOGIN] Email sent successfully`);
+    console.log(`[LOGIN] Email sent successfully`);
     // Return user info (without token yet) - controller only formats response
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "OTP sent to your email",
-      userId: user.id,
-      email: user.email,
-      requiresOTP: true,
+      message: responseMessage.auth.otpSent,
+      data: {
+        userId: user.id,
+        email: user.email,
+        requiresOTP: true
+      }
     });
   } catch (err: any) {
     console.error("Login error:", err);
-    res.status(400).json({ message: err.message || "Login failed" });
+    return res.status(400).json({
+      success: false,
+      message: err.message || responseMessage.error("login")
+    });
   }
 };
 
@@ -239,14 +279,16 @@ export const verifyOTPController = async (req: Request, res: Response) => {
     const { userId, otp } = req.body;
 
     if (!userId || !otp) {
-      return res.status(400).json({ message: "User ID and OTP are required" });
+      return res.status(400).json({   message: responseMessage.auth.otpRequired});
     }
 
     // Verify OTP (this now only clears otp_code, keeps timestamps)
     const result = await verifyOTP(userId, otp);
 
     if (!result.success) {
-      return res.status(400).json({ message: result.message });
+      return res.status(400).json({ 
+         success: false,
+         message: result.message });
     }
 
     // Get user with permissions
@@ -260,15 +302,17 @@ export const verifyOTPController = async (req: Request, res: Response) => {
 
     res.status(200).json({
       success: true,
-      message: "Login successful",
-      user,
+     message: responseMessage.auth.loginSuccess,
+      data: { user }
     });
   } catch (err: any) {
     console.error("OTP verification error:", err);
-    res.status(500).json({ message: err.message || "Verification failed" });
+     return res.status(500).json({
+      success: false,
+      message: err.message || responseMessage.auth.verificationFailed
+    });
   }
 };
-
 
 // ============================
 // RESEND OTP
@@ -279,21 +323,27 @@ export const resendOTPController = async (req: Request, res: Response) => {
     const { userId } = req.body;
 
     if (!userId) {
-      return res.status(400).json({ message: "User ID is required" });
+       return res.status(400).json({
+        success: false,
+        message: responseMessage.missingField("User ID") });
     }
 
     // Resend OTP (from service - handles DB logic)
     const result = await resendOTP(userId);
 
     if (!result.success) {
-      return res.status(400).json({ message: result.message });
+     return res.status(400).json({
+        success: false,
+        message: result.message
+       });
     }
 
     // Get user for email
     const user = await getUserByIdForEmailService(userId);
 
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return res.status(400).json({  success: false,
+        message: responseMessage.user.notFound });
     }
 
     // Send email
@@ -321,14 +371,14 @@ export const resendOTPController = async (req: Request, res: Response) => {
 
     res.status(200).json({
       success: true,
-      message: "New OTP sent successfully",
+      message: responseMessage.auth.otpResent
     });
   } catch (err: any) {
     console.error("Resend OTP error:", err);
-    res.status(500).json({ message: err.message || "Failed to resend OTP" });
+    res.status(500).json({ success: false,
+      message: err.message || responseMessage.auth.otpFailed });
   }
 };
-
 
 // ============================
 // LOGOUT USER
@@ -339,19 +389,30 @@ export const logoutUser = async (req: Request, res: Response) => {
     sameSite: "none",
     secure: process.env.NODE_ENV === "production",
   });
-  res.status(200).json({ message: "Logged out" });
+   return res.status(200).json({
+    success: true,
+    message: responseMessage.auth.logoutSuccess
+  });
 };
-
 // ============================
 // GET CURRENT USER
 // ============================
 export const getMe = async (req: Request, res: Response) => {
   try {
-    if (!req.user) return res.status(401).json({ message: "Not authenticated" });
+    if (!req.user)
+      return res.status(401).json({ success: false,
+        message: responseMessage.auth.notAuthenticated });
     const user = await getMeService(req.user.id);
-    res.status(200).json({ user });
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.fetched("User"),
+      data: { user }
+    });
   } catch (err: any) {
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({
+      success: false,
+      message: err.message || responseMessage.error("user")
+    });
   }
 };
 
@@ -362,19 +423,34 @@ export const deleteUser = async (req: Request, res: Response) => {
   try {
     const userIdToDelete = Number(req.params.id);
     if (isNaN(userIdToDelete))
-      return res.status(400).json(validationMessage.invalid("user ID"));
+      return res.status(400).json({
+        success: false,
+        message: responseMessage.user.invalidId
+      });
 
     const performedById = req.user?.id;
     if (!performedById)
-      return res.status(401).json(responseMessage.unauthorized);
+      return res.status(401).json({
+        success: false,
+        message: responseMessage.unauthorized
+      });
 
     const deleted = await deleteUserService(userIdToDelete, performedById);
-    if (!deleted) return res.status(404).json(responseMessage.notFound("User"));
+    if (!deleted)  return res.status(404).json({
+        success: false,
+        message: responseMessage.user.notFound
+      });
 
-    return res.status(200).json(responseMessage.deleted("User"));
+    return res.status(200).json({
+      success: true,
+      message: responseMessage.user.deleteSuccess
+    });
   } catch (err: any) {
     console.error("Delete user error:", err);
-    return res.status(500).json({ message: err.message || "Failed to delete user" });
+    return res
+      .status(500)
+      .json({  success: false,
+      message: err.message || responseMessage.error("user deletion") });
   }
 };
 

@@ -640,8 +640,6 @@ const Dashboard: React.FC = () => {
           </table>
         </div>
       </div>
-
-
     </div>
   );
 };

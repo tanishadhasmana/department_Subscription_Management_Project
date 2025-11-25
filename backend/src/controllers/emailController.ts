@@ -1,21 +1,22 @@
 import { Request, Response } from "express";
 import { checkAndSendReminders } from "../crons/subscriptionReminderCron";
 import { testEmailConnection } from "../utils/mailer";
+import { responseMessage } from "../utils/responseMessage";
 
 export const testEmailSetup = async (req: Request, res: Response) => {
   try {
     const isConnected = await testEmailConnection();
     
     if (!isConnected) {
-      return res.status(500).json({
+        return res.status(500).json({
         success: false,
-        message: "Email server connection failed. Check your .env settings.",
+        message: responseMessage.email.connectionFailed
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Email server is configured correctly!",
+       message: responseMessage.email.configured
     });
   } catch (error: any) {
     return res.status(500).json({
@@ -28,15 +29,14 @@ export const testEmailSetup = async (req: Request, res: Response) => {
 export const triggerManualEmailCheck = async (req: Request, res: Response) => {
   try {
     await checkAndSendReminders();
-    
     return res.status(200).json({
       success: true,
-      message: "Email check triggered successfully. Check console for details.",
+      message: responseMessage.email.checkTriggered
     });
   } catch (error: any) {
     return res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message
     });
   }
 };

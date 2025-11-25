@@ -20,15 +20,14 @@ export const getSubscriptionsCount = async (req: Request, res: Response) => {
     const total = await getSubscriptionsCountService();
     return res.status(200).json({
       success: true,
-      message: responseMessage.fetched("Subscription count"),
-      total,
+       message: responseMessage.subscription.countFetched,
+      data: { total }
     });
   } catch (error: any) {
     console.error("Failed to get subscriptions count:", error);
     return res.status(500).json({
       success: false,
-      message: responseMessage.error("getting subscription count"),
-      error: error.message,
+      message: error.message || responseMessage.error("subscription count")
     });
   }
 };
@@ -64,20 +63,19 @@ const result = await getAllSubscriptionsService(
     return res.status(200).json({
       success: true,
       message: responseMessage.subscription.fetchSuccess,
-      ...result,
+      data: result.subscriptions,
+      total: result.total,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage
     });
   } catch (error: any) {
     console.error("Error in getAllSubscriptions controller:", error);
     return res.status(500).json({
       success: false,
-      message: responseMessage.error("fetching subscriptions"),
-      error: error.message,
+      message: error.message || responseMessage.error("subscriptions")
     });
   }
 };
-
-
-
 
 
 // ----------------------------
@@ -87,30 +85,27 @@ export const getSubscriptionById = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id))
-      return res
-        .status(400)
-        .json({ success: false, message: responseMessage.invalidInput("ID") });
-
+      return res.status(400).json({
+        success: false,
+        message: responseMessage.subscription.invalidId
+      });
     const subscription = await getSubscriptionByIdService(id);
     if (!subscription)
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: responseMessage.subscription.notFound,
-        });
+      return res.status(404).json({
+        success: false,
+        message: responseMessage.subscription.notFound
+      });
 
-    return res.status(200).json({
+   return res.status(200).json({
       success: true,
       message: responseMessage.fetched("Subscription"),
-      data: subscription,
+      data: subscription
     });
   } catch (error: any) {
     console.error("Error fetching subscription by ID:", error);
     return res.status(500).json({
       success: false,
-      message: responseMessage.error("fetching subscription"),
-      error: error.message,
+      message: error.message || responseMessage.error("subscription")
     });
   }
 };
@@ -148,24 +143,21 @@ export const createSubscription = async (req: Request, res: Response) => {
     if (!validation.success) {
       return res.status(400).json({
         success: false,
-        message:
-          validation.error.issues[0].message ||
-          validationMessage.invalid("input"),
+        message: validation.error.issues[0].message || responseMessage.invalidInput()
       });
     }
 
     const subscription = await createSubscriptionService(validation.data);
-
     return res.status(201).json({
       success: true,
       message: responseMessage.subscription.createSuccess,
-      data: subscription,
+      data: subscription
     });
   } catch (error: any) {
     console.error("Create subscription error:", error);
-    return res.status(400).json({
+  return res.status(400).json({
       success: false,
-      message: error.message || "Failed to create subscription", 
+      message: error.message || responseMessage.error("subscription creation")
     });
   }
 };
@@ -175,16 +167,17 @@ export const updateSubscription = async (req: Request, res: Response) => {
   try {
     const subscriptionId = Number(req.params.id);
     if (isNaN(subscriptionId)) {
-      return res
-        .status(400)
-        .json({ success: false, message: validationMessage.invalid("ID") });
+       return res.status(400).json({
+        success: false,
+        message: responseMessage.subscription.invalidId
+      });
     }
 
     const validation = schemas.updateSubscriptionSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
         success: false,
-        message: validation.error.issues[0].message || validationMessage.invalid("input"),
+        message: validation.error.issues[0].message || responseMessage.invalidInput()
       });
     }
 
@@ -198,22 +191,19 @@ export const updateSubscription = async (req: Request, res: Response) => {
         .status(404)
         .json({ success: false, message: responseMessage.subscription.notFound });
     }
-
-    return res.status(200).json({
+return res.status(200).json({
       success: true,
       message: responseMessage.subscription.updateSuccess,
-      data: updatedSubscription,
+      data: updatedSubscription
     });
   } catch (error: any) {
     console.error(error);
     return res.status(500).json({
       success: false,
-      message: responseMessage.error("updating subscription"),
-      error: error.message,
+      message: error.message || responseMessage.error("subscription update")
     });
   }
 };
-
 
 // ----------------------------
 // Delete Subscription
@@ -222,15 +212,17 @@ export const deleteSubscription = async (req: Request, res: Response) => {
   try {
     const subscriptionIdToDelete = Number(req.params.id);
     if (isNaN(subscriptionIdToDelete))
-      return res
-        .status(400)
-        .json({ success: false, message: responseMessage.invalidInput("ID") });
+     return res.status(400).json({
+        success: false,
+        message: responseMessage.subscription.invalidId
+      });
 
     const performedById = req.user?.id;
     if (!performedById)
-      return res
-        .status(401)
-        .json({ success: false, message: responseMessage.unauthorized });
+     return res.status(401).json({
+        success: false,
+        message: responseMessage.unauthorized
+      });
 
     const deleted = await deleteSubscriptionService(
       subscriptionIdToDelete,

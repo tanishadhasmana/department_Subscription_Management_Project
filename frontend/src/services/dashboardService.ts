@@ -37,14 +37,26 @@ export const getDashboardMetrics = async (
   return res.data.data as DashboardMetrics;
 };
 // fetch all departments from backend to show in filter dropdown
-export const getAllDepartments = async (): Promise<Department[]> => {
-  // making a get request to /departments
+
+// export const getAllDepartments = async (): Promise<Department[]> => {
+//   // making a get request to /departments
+//   const res = await api.get("/departments", { withCredentials: true });
+// // If the response data has a departments field, return that as Department array
+//   if (res.data.departments) {
+//     return res.data.departments as Department[];
+//   }
+
+//   return res.data as Department[];
+// };
+
+export const getAllDepartments = async () => {
   const res = await api.get("/departments", { withCredentials: true });
-// If the response data has a departments field, return that as Department array
-  if (res.data.departments) {
-    return res.data.departments as Department[];
+
+  // Backend shape: { success, message, data: [...] }
+  if (Array.isArray(res.data?.data)) {
+    return res.data.data;
   }
 
-  return res.data as Department[];
+  console.error("Unexpected departments API shape:", res.data);
+  throw new Error("Invalid departments response format");
 };
-

@@ -61,7 +61,7 @@ export const updateSubscriptionStatuses = async () => {
         updatedCount++;
       }
 
-      // Count for logging
+     
       if (calculatedStatus === "Active") {
         activeCount++;
       } else {
@@ -92,7 +92,6 @@ export const updateSubscriptionStatuses = async () => {
  * Start the CRON job to run daily at midnight
  */
 export const startSubscriptionStatusUpdateCron = () => {
-  //  CRITICAL FIX: Run daily at midnight (00:00) in Asia/Kolkata timezone
   const CRON_EXPR = "0 0 * * *"; // Every day at 00:00 (midnight)
 
   console.log(
@@ -114,7 +113,6 @@ export const startSubscriptionStatusUpdateCron = () => {
 
   task.start();
 
-  //  CRITICAL FIX: Run immediately on server startup
   console.log("[CRON]  Running initial subscription status update...");
   updateSubscriptionStatuses()
     .then(() => {

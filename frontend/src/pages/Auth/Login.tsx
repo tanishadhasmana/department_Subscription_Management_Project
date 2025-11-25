@@ -39,7 +39,10 @@ const Login = () => {
   });
 
   useEffect(() => {
-    if (user) navigate("/dashboard", { replace: true });
+    if (user) {
+      console.log("User authenticated, navigating to dashboard:", user.email);
+      navigate("/dashboard", { replace: true });
+    }
   }, [user, navigate]);
 
   // Step 1: Submit credentials and trigger OTP if required
@@ -47,9 +50,10 @@ const Login = () => {
     try {
       const res = await loginRequest(data.email, data.password);
 
-      if (res.data?.requiresOTP) {
-        setPendingUserId(res.data.userId ?? null);
-        setPendingEmail(res.data.email ?? "");
+      if (res.data?.success && res.data?.data?.requiresOTP) {
+        setPendingUserId(res.data.data.userId ?? null);
+        setPendingEmail(res.data.data.email ?? "");
+
         setShowOTPModal(true);
         toast.success("OTP sent to your email!");
       } else if (res.data?.success && res.data?.user) {
@@ -96,12 +100,10 @@ const Login = () => {
 
   const handleVerifyOTP = async (otp: string) => {
     const res = await verifyOTPRequest(pendingUserId, otp);
-
-    if (!res.data?.success || !res.data?.user) {
+    if (!res.data?.success || !res.data?.data?.user) {
       throw new Error(res.data?.message || "Verification failed");
     }
-
-    const backendUser: User = res.data.user;
+    const backendUser: User = res.data.data.user;
 
     login({
       ...backendUser,
@@ -110,7 +112,7 @@ const Login = () => {
 
     toast.success("Login successful!");
     setShowOTPModal(false);
-    navigate("/dashboard", { replace: true });
+    navigate("/dashboard");
   };
 
   const handleResendOTP = async () => {
