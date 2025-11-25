@@ -9,7 +9,7 @@ export const getUsers = async (
   sortBy?: string,
   sortOrder?: "asc" | "desc"
 ): Promise<{
-  users: User[];
+  data: User[];
   total: number;
   totalPages: number;
   currentPage: number;

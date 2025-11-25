@@ -12,7 +12,7 @@ export interface Subscription {
   subsc_status: "active" | "inactive";
   department_id?: number;
   payment_method: string;
-  department_name?: string; // Filled dynamically from join
+  department_name?: string; 
   created_at?: string;
   updated_at?: string;
   deleted_at?: string;

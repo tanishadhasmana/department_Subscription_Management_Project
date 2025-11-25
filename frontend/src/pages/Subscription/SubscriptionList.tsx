@@ -56,7 +56,7 @@ const SubscriptionList: React.FC = () => {
         };
 
         const response = await getSubscriptions(params);
-        setSubscriptions(response.subscriptions || []);
+        setSubscriptions(response.data || []);
         setTotalSubscriptions(response.total || 0);
         setTotalPages(response.totalPages ?? 1);
       } catch (err) {

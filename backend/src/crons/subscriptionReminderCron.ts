@@ -50,7 +50,7 @@ const calculateDaysUntilExpiry = (renewDate: string): number => {
 
 export const checkAndSendReminders = async () => {
   try {
-    console.log("🔍 Checking for subscriptions expiring soon...");
+    console.log("Checking for subscriptions expiring soon...");
 
     const subscriptions: SubscriptionData[] = await db("subscriptions as s")
       .leftJoin("departments as d", "s.department_id", "d.id")
@@ -67,9 +67,9 @@ export const checkAndSendReminders = async () => {
       .whereNotNull("s.renew_date")
       .whereNull("s.deleted_at");
 
-    console.log(`📊 Found ${subscriptions.length} active subscription(s) to check`);
+    console.log(`Found ${subscriptions.length} active subscription(s) to check`);
 
-    const reminders = [7, 3, 0]; // Days before expiry to send reminders
+    const reminders = [7, 3, 1]; // Days before expiry to send reminders
     
     // Group subscriptions by days until expiry
     const groupedByDays: { [key: number]: SubscriptionData[] } = {};
@@ -143,7 +143,7 @@ export const checkAndSendReminders = async () => {
       }
     }
 
-    console.log(`✅ Reminder check complete. ${emailsSent} email(s) sent.`);
+    console.log(` Reminder check complete. ${emailsSent} email(s) sent.`);
     return { checked: subscriptions.length, sent: emailsSent };
   } catch (error: any) {
     console.error("❌ Error in subscription reminder cron:", error);

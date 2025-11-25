@@ -16,7 +16,6 @@ import ResetPassword from "../pages/Auth/ResetPassword.tsx";
 
 const AppRouter = () => {
   const { user, loading } = useAuth();
-
   // prevent rendering routes before knowing if user is authenticated
   if (loading) return <div className="text-center mt-20">Loading session...</div>;
 

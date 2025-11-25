@@ -36,7 +36,6 @@ export const getSubscriptions = async (params: {
   return response.data;
 };
 
-
 export const getSubscriptionById = async (id: number): Promise<Subscription> => {
   const res = await api.get(`/subscriptions/${id}`, { withCredentials: true });
   return res.data?.data ?? res.data;

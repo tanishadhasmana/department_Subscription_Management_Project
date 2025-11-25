@@ -12,7 +12,7 @@ const UserList: React.FC = () => {
     try {
       setLoading(true);
       const data = await getUsers();
-      setUsers(data.users || []);
+      setUsers(data.data || []);
     } catch (err) {
       console.error("Failed to fetch users:", err);
       toast.error("Failed to load users");

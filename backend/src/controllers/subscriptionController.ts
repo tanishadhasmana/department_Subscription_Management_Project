@@ -9,7 +9,6 @@ import {
   exportSubscriptionsCSVService,
 } from "../services/subscriptionService";
 import { responseMessage } from "../utils/responseMessage";
-import { validationMessage } from "../utils/validationMessage";
 import { schemas } from "../validation/Validation";
 
 // ----------------------------

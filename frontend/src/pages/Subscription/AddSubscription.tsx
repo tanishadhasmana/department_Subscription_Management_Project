@@ -12,10 +12,6 @@ import { getDepartments } from "../../services/departmentService";
 import type { Subscription } from "../../types/Subscription";
 import { URL_REGEX } from "../../components/common/regexPatterns";
 
-export const urlRegex =
-  // eslint-disable-next-line no-useless-escape
-  /^(https?:\/\/)([\w\-]+(\.[\w\-]+)+)([\/\w\-.,@?^=%&:;+#]*)?$/;
-
 type SubscriptionFormData = Omit<Subscription, "id">;
 
 const AddSubscription: React.FC = () => {
@@ -90,6 +86,7 @@ const AddSubscription: React.FC = () => {
     (async () => {
       try {
         const deps = await getDepartments();
+
         setDepartments(
           deps.map((d: { id: number; department_name: string }) => ({
             id: d.id,
@@ -109,7 +106,6 @@ const AddSubscription: React.FC = () => {
     const fetchData = async () => {
       try {
         const data = await getSubscriptionById(Number(id));
-
         if (departments.length === 0) {
           const checkInterval = setInterval(() => {
             if (departments.length > 0) {

@@ -37,7 +37,7 @@ const checkSession = useCallback(async () => {
     //we check for the authenticated session, withcredentials true to send the cookie along with request
     const res = await api.get("/users/me", { withCredentials: true });
     // extract user from response
-    const backendUser = res.data?.user;
+    const backendUser = res.data?.data?.user;
 // if backend gives user data, we map it to our frontend user type
     if (backendUser) {
       const mappedUser: User = {
@@ -99,6 +99,7 @@ const login = async (userData: User) => {
     }
     // clear user state on logout, navigate to login page
     setUser(null);
+  
     navigate("/login");
   };
 
